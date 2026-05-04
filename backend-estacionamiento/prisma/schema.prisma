@@ -1,0 +1,106 @@
+// prisma/schema.prisma
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+// ---------------------------------------------------------
+// ENUMS (Para manejar los estados y roles)
+// ---------------------------------------------------------
+enum RolUsuario {
+  CONDUCTOR
+  INSPECTOR
+  ADMINISTRADOR
+}
+
+enum EstadoMulta {
+  PENDIENTE
+  PAGADA
+  ANULADA
+}
+
+// ---------------------------------------------------------
+// ENTIDADES
+// ---------------------------------------------------------
+
+model Usuario {
+  id       Int        @id @default(autoincrement())
+  dni      String     @unique
+  email    String     @unique
+  password String     // Contraseña hasheada
+  rol      RolUsuario @default(CONDUCTOR)
+
+  // Relaciones (La "herencia" del diagrama ER se maneja con relaciones 1 a 1)
+  conductor Conductor?
+  inspector Inspector?
+}
+
+model Conductor {
+  id        Int    @id @default(autoincrement())
+  saldo     Float  @default(0.0)
+  
+  usuarioId Int    @unique
+  usuario   Usuario @relation(fields: [usuarioId], references: [id])
+  
+  vehiculos Vehiculo[]
+}
+
+model Inspector {
+  id        Int    @id @default(autoincrement())
+  legajo    String @unique
+  
+  usuarioId Int    @unique
+  usuario   Usuario @relation(fields: [usuarioId], references: [id])
+  
+  multasEmitidas Multa[]
+}
+
+model Vehiculo {
+  patente     String @id
+  
+  conductorId Int
+  conductor   Conductor @relation(fields: [conductorId], references: [id])
+  
+  sesiones    SesionEstacionamiento[]
+  multas      Multa[]
+}
+
+model Zona {
+  id          Int     @id @default(autoincrement())
+  nombre      String
+  calles      String  // Podría ser un JSON con coordenadas para el mapa
+  precio_hora Float
+  
+  sesiones    SesionEstacionamiento[]
+}
+
+model SesionEstacionamiento {
+  id           Int      @id @default(autoincrement())
+  fecha_inicio DateTime @default(now())
+  fecha_fin    DateTime?
+  
+  patente      String
+  vehiculo     Vehiculo @relation(fields: [patente], references: [patente])
+  
+  zonaId       Int
+  zona         Zona     @relation(fields: [zonaId], references: [id])
+}
+
+model Multa {
+  id_multa    Int         @id @default(autoincrement())
+  fecha       DateTime    @default(now())
+  ubicacion   String
+  monto       Float
+  estado      EstadoMulta @default(PENDIENTE)
+  
+  inspectorId Int
+  inspector   Inspector   @relation(fields: [inspectorId], references: [id])
+  
+  patente     String
+  vehiculo    Vehiculo    @relation(fields: [patente], references: [patente])
+}
