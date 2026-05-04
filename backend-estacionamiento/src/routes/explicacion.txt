@@ -1,0 +1,9 @@
+Aca van las flechas de peticiones JSON, tenemos:
+-peticiones de usuarios para gestionar las sesiones de estacionamiento
+-peticiones de usuarios para cargar saldos y pagar multas
+-peticiones de usuarios de los inspectores para verificar las patentes
+-peticiones de usuariosde los administradores para gestionar las zonas
+-peticiones de inicio de sesion al controlador de usuarios
+
+Responsabilidad: Mapear los verbos HTTP (GET, POST, etc.) y los endpoints hacia los métodos específicos 
+de cada controlador. Aquí es donde se inyecta el seguridad.ts

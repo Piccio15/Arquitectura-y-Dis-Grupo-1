@@ -1,0 +1,1 @@
+/*Mapea a "Servicio de zonas" en el diagrama de componentes. Gestiona la lógica de zonas y tarifas. */

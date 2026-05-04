@@ -1,0 +1,2 @@
+Su propósito es envolver la comunicación con APIs externas para que, si el proveedor cambia, 
+la lógica de negocio interna (services) no se vea afectada.

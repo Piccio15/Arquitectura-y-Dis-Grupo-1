@@ -1,0 +1,11 @@
+--> Esta capa Repositorio se crea para mantener una arquitectura robusta, mantenible y libre de acoplamiento rígido.
+    -El patron Repository actua como un intermediario entre las capas de dominio (sus Services) y 
+    de mapeo de datos (el ORM). Este patrón actúa como una colección de objetos en memoria. 
+        -La justificación técnica es que la lógica de negocio no debe saber si los datos provienen de una
+        base de datos SQL, de un archivo de texto o de un servicio externo en la nube.
+    -Bajo el Principio de Inversión de Dependencias, los módulos de alto nivel (como la capa services) 
+    no deben depender de los módulos de bajo nivel (como las consultas específicas del ORM). Ambos deben 
+    depender de abstracciones.
+        -Si los servicios invocaran directamente al ORM (por ejemplo, haciendo prisma.usuario.findUnique()
+        dentro de service-identidad.ts), cualquier actualización, cambio de versión o sustitución del ORM
+        obligaría a reescribir toda la lógica de negocio del sistema, violando los principios de diseño.

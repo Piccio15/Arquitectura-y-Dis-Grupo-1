@@ -1,0 +1,2 @@
+Los controladores son los encargados de recibir la entrada del usuario, validarla sintácticamente
+y delegar el procesamiento. No deben contener reglas de negocio.

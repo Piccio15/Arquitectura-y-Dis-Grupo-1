@@ -1,0 +1,2 @@
+Es la capa de servicios. Define los límites de la aplicación y encapsula 
+estrictamente las reglas de negocio, coordinando repositorios y otros servicios.
