@@ -1,28 +1,36 @@
-import { useContext, type JSX } from 'react';
+import { useAuth, useUser } from '@clerk/clerk-react';
 import { Navigate } from 'react-router-dom';
-import { AuthContext } from '../contextos/AuthContext';
 import type { RolUsuario } from '../App';
 
-interface RutaProtegidaProps {
-  children: JSX.Element;
+interface Props {
+  children: React.ReactNode;
   rolRequerido: RolUsuario;
 }
 
-export function RutaProtegida({ children, rolRequerido }: RutaProtegidaProps) {
-  const contexto = useContext(AuthContext);
+export function RutaProtegida({ children, rolRequerido }: Props) {
+  const { isLoaded, isSignedIn } = useAuth();
+  const { user } = useUser();
 
-  if (!contexto) {
-    throw new Error('RutaProtegida debe ser usada dentro de un AuthProvider');
+  // 1. Mientras Clerk está cargando la sesión, no mostramos nada 
+  // (Esto evita el error de resolveDispatcher null)
+  if (!isLoaded) {
+    return <div style={{ display: 'flex', justifyContent: 'center', marginTop: '50px' }}>Cargando sesión...</div>;
   }
 
-  if (contexto.cargando) {
-    return <div>Verificando credenciales...</div>;
-  }
-
-  if (!contexto.token || contexto.rolActivo !== rolRequerido) {
-    // Si no hay token o el rol no coincide, se deniega el acceso y se redirige
+  // 2. Si no está logueado, mandarlo al login
+  if (!isSignedIn) {
     return <Navigate to="/" replace />;
   }
 
-  return children;
+  // 3. Verificación de Rol (usando la metadata de Clerk que hablamos)
+  // Por ahora, si no configuraron metadata, pueden comentar este bloque 
+  // para testear que al menos entran a la app.
+  const rolDelUsuario = user?.publicMetadata?.role as RolUsuario;
+
+  if (rolRequerido && rolDelUsuario !== rolRequerido) {
+    // Si es conductor y quiere entrar a /admin, lo mandamos a su portal
+    return <Navigate to="/conductor" replace />;
+  }
+
+  return <>{children}</>;
 }

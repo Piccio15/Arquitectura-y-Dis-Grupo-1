@@ -1,7 +1,6 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
-import { AuthProvider } from './contextos/AuthContext';
+import { SignedIn, SignedOut, SignIn } from '@clerk/clerk-react';
 import { RutaProtegida } from './componentes/RutaProtegida';
-import Login from './paginas/Login';
 
 // Controladores de Subsistema (Vistas Principales / Layouts)
 import DashboardAdmin from './paginas/dashboardAdmin';
@@ -30,11 +29,26 @@ export type RolUsuario = 'ADMINISTRADOR' | 'INSPECTOR' | 'CONDUCTOR';
 
 export default function App() {
   return (
-    <AuthProvider>
+    
       <BrowserRouter>
         <Routes>
-          {/* Ruta Base: Autenticación */}
-          <Route path="/" element={<Login />} />
+          {/* Ruta Base: Autenticación Delegada a Clerk */}
+        <Route path="/" element={
+          <>
+            <SignedOut>
+              {/* Clerk renderiza su propio formulario de login aquí. 
+                  routing="hash" evita conflictos con react-router-dom */}
+              <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
+                <SignIn routing="hash" />
+              </div>
+            </SignedOut>
+            
+            <SignedIn>
+              {/* Si el usuario ya está logueado, lo mandamos a su panel por defecto. */}
+              <Navigate to="/conductor" replace />
+            </SignedIn>
+          </>
+        } />
 
           {/* Subsistema: Administración Central */}
           <Route path="/admin" element={
@@ -75,6 +89,6 @@ export default function App() {
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </BrowserRouter>
-    </AuthProvider>
+          
   );
 }
