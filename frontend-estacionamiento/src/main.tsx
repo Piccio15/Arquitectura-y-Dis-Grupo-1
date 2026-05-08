@@ -5,7 +5,7 @@ import { ClerkProvider } from '@clerk/clerk-react'
 
 // 1. Asegúrate de que la llave no sea undefined
 const PUBLISHABLE_KEY = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY
-console.log("Mi clave de Clerk es:", PUBLISHABLE_KEY);
+
 if (!PUBLISHABLE_KEY) {
   throw new Error("Missing Publishable Key")
 }

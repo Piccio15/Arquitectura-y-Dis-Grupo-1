@@ -1,6 +1,7 @@
 import express, { Request, Response } from 'express';
 import { PrismaClient } from '@prisma/client';
 import { clerkMiddleware } from '@clerk/express';
+import cors from 'cors';
 
 // Inicializamos Express y Prisma
 const app = express();
@@ -18,6 +19,12 @@ declare global {
     }
   }
 }
+
+app.use(cors({
+  origin: 'http://localhost:5173', // Solo permitís a tu frontend
+  methods: ['GET', 'POST', 'PUT', 'DELETE'],
+  allowedHeaders: ['Content-Type', 'Authorization']
+}))
 
 app.use(express.json());
 app.use(clerkMiddleware());
@@ -72,6 +79,32 @@ app.post('/api/estacionamiento/iniciar', async (req: Request, res: Response) => 
       });
   } catch (error) {
       res.status(500).json({ error: "Error en el servidor" });
+  }
+});
+
+// En tu archivo de rutas de usuario INTENTO CREAR UN USUARIO SI ES LA PRIMERA VEZ QUE INICIA SESIÓN
+app.post('/api/usuarios/sync', async (req: Request, res: Response) => {
+  const { clerk_id, email } = req.body; // Estos vienen del frontend tras el login
+
+  try {
+    const usuario = await prisma.usuario.upsert({
+      where: { clerk_id: clerk_id },
+      update: {}, // Si ya existe, no hace nada
+      create: {
+        clerk_id: clerk_id,
+        email: email,
+        dni: clerk_id, // Lo ponemos temporal, después le pedís que lo complete
+        rol: "CONDUCTOR",
+        conductor: {
+          create: { saldo: 0.0 }
+        }
+      },
+      include: { conductor: true }
+    });
+
+    res.json(usuario);
+  } catch (error) {
+    res.status(500).json({ error: "Error al sincronizar usuario" });
   }
 });
 
