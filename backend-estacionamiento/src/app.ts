@@ -1,6 +1,6 @@
 import express, { Request, Response } from 'express';
 import { PrismaClient } from '@prisma/client';
-import { clerkMiddleware } from '@clerk/express';
+import { clerkClient, clerkMiddleware } from '@clerk/express';
 import cors from 'cors';
 
 // Inicializamos Express y Prisma
@@ -100,6 +100,13 @@ app.post('/api/usuarios/sync', async (req: Request, res: Response) => {
         }
       },
       include: { conductor: true }
+    });
+
+    // 💡 PASO CLAVE: Le informamos a Clerk el rol que tiene en nuestra DB
+    await clerkClient.users.updateUserMetadata(clerk_id, {
+      publicMetadata: {
+        role: usuario.rol
+      }
     });
 
     res.json(usuario);

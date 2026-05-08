@@ -25,13 +25,17 @@ export function RutaProtegida({ children, rolRequerido }: Props) {
   // 3. Verificación de Rol (usando la metadata de Clerk que hablamos)
   // Por ahora, si no configuraron metadata, pueden comentar este bloque 
   // para testear que al menos entran a la app.
-  /* const rolDelUsuario = user?.publicMetadata?.role as RolUsuario;
+  const rolDelUsuario = user?.publicMetadata?.role as RolUsuario;
 
-  if (rolRequerido && rolDelUsuario !== rolRequerido) {
-    // Si es conductor y quiere entrar a /admin, lo mandamos a su portal
+  if (rolDelUsuario !== rolRequerido) {
+    console.warn(`Intento de acceso no autorizado. Requerido: ${rolRequerido}, Tiene: ${rolDelUsuario}`);
+    
+    // Redirigir según el rol que SÍ tiene para que no quede atrapado
+    if (rolDelUsuario === 'ADMINISTRADOR') return <Navigate to="/admin" replace />;
+    if (rolDelUsuario === 'INSPECTOR') return <Navigate to="/inspector" replace />;
     return <Navigate to="/conductor" replace />;
   }
-  */
+  
  
   return <>{children}</>;
 }
