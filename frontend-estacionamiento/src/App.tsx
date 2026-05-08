@@ -2,7 +2,6 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider } from './contextos/AuthContext';
 import { RutaProtegida } from './componentes/RutaProtegida';
 import Login from './paginas/Login';
-import DespachoRol from './paginas/DespachoRol';
 
 // Controladores de Subsistema (Vistas Principales / Layouts)
 import DashboardAdmin from './paginas/dashboardAdmin';
@@ -34,11 +33,8 @@ export default function App() {
     <AuthProvider>
       <BrowserRouter>
         <Routes>
-          {/* Autenticación delegada a Clerk */}
-          <Route path="/sign-in/*" element={<Login />} />
-
-          {/* Despacho por rol: redirige al subsistema correspondiente */}
-          <Route path="/" element={<DespachoRol />} />
+          {/* Ruta Base: Autenticación */}
+          <Route path="/" element={<Login />} />
 
           {/* Subsistema: Administración Central */}
           <Route path="/admin" element={
@@ -46,11 +42,12 @@ export default function App() {
               <DashboardAdmin />
             </RutaProtegida>
           }>
+            {/* El índice renderiza el menú de tarjetas por defecto */}
             <Route index element={<MenuAdmin />} />
             <Route path="zonas" element={<ModuloZonas />} />
             <Route path="inspectores" element={<ModuloInspectores />} />
           </Route>
-
+          
           {/* Subsistema: Portal del Conductor */}
           <Route path="/conductor" element={
             <RutaProtegida rolRequerido="CONDUCTOR">
@@ -74,8 +71,8 @@ export default function App() {
             <Route path="verificar" element={<ModuloVerificarPatente />} />
           </Route>
 
-          {/* Regla de Captura por Defecto */}
-          <Route path="*" element={<Navigate to="/sign-in" replace />} />
+          {/* Regla de Captura por Defecto (Fallback de Seguridad) */}
+          <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </BrowserRouter>
     </AuthProvider>

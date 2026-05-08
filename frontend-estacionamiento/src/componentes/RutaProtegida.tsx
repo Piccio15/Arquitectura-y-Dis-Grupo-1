@@ -1,6 +1,5 @@
 import { useContext, type JSX } from 'react';
 import { Navigate } from 'react-router-dom';
-import { useAuth } from '@clerk/clerk-react';
 import { AuthContext } from '../contextos/AuthContext';
 import type { RolUsuario } from '../App';
 
@@ -10,18 +9,18 @@ interface RutaProtegidaProps {
 }
 
 export function RutaProtegida({ children, rolRequerido }: RutaProtegidaProps) {
-  const { isLoaded, isSignedIn } = useAuth();
   const contexto = useContext(AuthContext);
 
-  if (!isLoaded || contexto?.cargando) {
+  if (!contexto) {
+    throw new Error('RutaProtegida debe ser usada dentro de un AuthProvider');
+  }
+
+  if (contexto.cargando) {
     return <div>Verificando credenciales...</div>;
   }
 
-  if (!isSignedIn) {
-    return <Navigate to="/sign-in" replace />;
-  }
-
-  if (contexto?.rolActivo !== rolRequerido) {
+  if (!contexto.token || contexto.rolActivo !== rolRequerido) {
+    // Si no hay token o el rol no coincide, se deniega el acceso y se redirige
     return <Navigate to="/" replace />;
   }
 
