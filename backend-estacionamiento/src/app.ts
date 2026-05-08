@@ -30,7 +30,7 @@ app.use(express.json());
 app.use(clerkMiddleware());
 
 
-//INTENTO CREAR UN USUARIO SI ES LA PRIMERA VEZ QUE INICIA SESIÓN ESTE POST NO BORRAR, ESTA FUNCIONANDO. faltaria realocar.
+//INTENTO CREAR UN USUARIO SI ES LA PRIMERA VEZ QUE INICIA SESIÓN y actualizo metadata de clerk // NO BORRAR, ESTA FUNCIONANDO. faltaria realocar.
 app.post('/api/usuarios/sync', async (req: Request, res: Response) => {
   const { clerk_id, email } = req.body; // Estos vienen del frontend tras el login
 
@@ -60,6 +60,39 @@ app.post('/api/usuarios/sync', async (req: Request, res: Response) => {
     res.json(usuario);
   } catch (error) {
     res.status(500).json({ error: "Error al sincronizar usuario" });
+  }
+});
+
+
+// ==========================================
+// RUTAS DE PRUEBA PARA ZONAS (CRUD BÁSICO)
+// ==========================================
+//// 1. POST: Crear una nueva zona
+app.post('/api/zonas', async (req: Request, res: Response) => {
+  try {
+    const { nombre, calles, precio_hora } = req.body;
+    const nuevaZona = await prisma.zona.create({
+      data: {
+        nombre: nombre,
+        calles: calles,
+        precio_hora: precio_hora
+      }
+    });
+    res.status(201).json({ mensaje: "Zona creada con éxito", zona: nuevaZona });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: "Error interno al crear la zona" });
+  }
+});
+
+// 2. GET: Obtener todas las zonas
+app.get('/api/zonas', async (req: Request, res: Response) => {
+  try {
+    const zonas = await prisma.zona.findMany();
+    res.status(200).json(zonas);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: "Error al obtener las zonas" });
   }
 });
 
