@@ -30,9 +30,9 @@ enum EstadoMulta {
 
 model Usuario {
   id       Int        @id @default(autoincrement())
+  clerk_id  String     @unique
   dni      String     @unique
   email    String     @unique
-  password String     // Contraseña hasheada
   rol      RolUsuario @default(CONDUCTOR)
 
   // Relaciones (La "herencia" del diagrama ER se maneja con relaciones 1 a 1)
