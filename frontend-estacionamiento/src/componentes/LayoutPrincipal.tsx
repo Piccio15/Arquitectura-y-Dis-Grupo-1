@@ -15,7 +15,7 @@ export function LayoutPrincipal({ titulo, rutaInicio, children }: LayoutProps) {
 
   const manejarCierreSesion = () => {
     if (auth) auth.cerrarSesion();
-    navigate('/', { replace: true });
+    navigate('/sign-in', { replace: true });
   };
 
   // Determina si el usuario está en un submódulo para mostrar el botón "Volver"
