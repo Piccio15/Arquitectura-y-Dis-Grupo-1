@@ -26,12 +26,9 @@ export default function VistaConductor() {
     }
   }, [isLoaded, user]); // IMPORTANTE: Agregá isLoaded acá
 
-  return (/*
+  return (
     <LayoutPrincipal titulo="Portal del Conductor" rutaInicio="/conductor">
       <Outlet />
     </LayoutPrincipal>
-    */
-    <h1>Bienvenido al Portal del Conductor</h1>
-
   );
 }
