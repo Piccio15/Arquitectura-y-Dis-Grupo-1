@@ -1,6 +1,6 @@
-import {useContext, type ReactNode } from 'react';
+import { type ReactNode } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { AuthContext } from '../contextos/AuthContext';
+import { useClerk } from '@clerk/clerk-react';
 
 interface LayoutProps {
   titulo: string;
@@ -9,13 +9,12 @@ interface LayoutProps {
 }
 
 export function LayoutPrincipal({ titulo, rutaInicio, children }: LayoutProps) {
-  const auth = useContext(AuthContext);
+  const { signOut } = useClerk();
   const navigate = useNavigate();
   const location = useLocation();
 
   const manejarCierreSesion = () => {
-    if (auth) auth.cerrarSesion();
-    navigate('/', { replace: true });
+    signOut(() => navigate('/', { replace: true }));
   };
 
   // Determina si el usuario está en un submódulo para mostrar el botón "Volver"
