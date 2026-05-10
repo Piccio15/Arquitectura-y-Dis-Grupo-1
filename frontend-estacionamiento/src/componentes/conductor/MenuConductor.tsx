@@ -1,51 +1,53 @@
+// src/componentes/conductor/MenuConductor.tsx
 import { useNavigate } from 'react-router-dom';
+import { useUser } from '@clerk/clerk-react';
+import { motion } from 'framer-motion';
+
+const item = { hidden: { opacity: 0, x: -16 }, show: { opacity: 1, x: 0 } };
+const lista = { hidden: {}, show: { transition: { staggerChildren: 0.07 } } };
 
 export default function MenuConductor() {
   const navigate = useNavigate();
+  const { user } = useUser();
+  const nombre = user?.firstName || 'conductor';
 
-  // Estilo base para las tarjetas (PWA First)
-  const estiloTarjeta = {
-    backgroundColor: '#ffffff',
-    padding: '2rem 1rem',
-    borderRadius: '8px',
-    boxShadow: '0 4px 6px rgba(0,0,0,0.1)',
-    textAlign: 'center' as const,
-    cursor: 'pointer',
-    border: '1px solid #e0e0e0',
-    display: 'flex',
-    flexDirection: 'column' as const,
-    alignItems: 'center',
-    gap: '0.5rem'
-  };
+  const modulos = [
+    { ruta: 'vehiculos',        icono: '🚗', color: 'azul',    titulo: 'Mis Vehículos',    desc: 'Administrá tus patentes registradas', accent: '#2563eb' },
+    { ruta: 'estacionamiento',  icono: '⏱️', color: 'verde',   titulo: 'Estacionamiento',  desc: 'Ver y finalizar sesiones activas',    accent: '#16a34a' },
+    { ruta: 'saldo',            icono: '💳', color: 'azul',    titulo: 'Billetera Virtual', desc: 'Recargar saldo para estacionar',      accent: '#2563eb' },
+    { ruta: 'multas',           icono: '📋', color: 'naranja', titulo: 'Infracciones',      desc: 'Ver y pagar multas pendientes',       accent: '#ea580c' },
+  ];
 
   return (
     <div>
-      <h2 style={{ color: '#2c3e50', marginTop: 0, marginBottom: '1.5rem', fontSize: '1.3rem' }}>Seleccione un módulo</h2>
-      
-      {/* CSS Grid adaptativo: 1 columna en celulares, 2 en pantallas más anchas */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '1.5rem' }}>
-        
-        <div style={estiloTarjeta} onClick={() => navigate('vehiculos')}>
-          <div style={{ fontSize: '2rem' }}>🚗</div>
-          <h3 style={{ margin: 0, color: '#2980b9' }}>Mis Vehículos</h3>
-        </div>
+      <motion.div
+        initial={{ opacity: 0, y: -8 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.25 }}
+        className="menu-hero"
+      >
+        <h2>Hola, {nombre} 👋</h2>
+        <p>¿Qué querés hacer hoy?</p>
+      </motion.div>
 
-        <div style={estiloTarjeta} onClick={() => navigate('estacionamiento')}>
-          <div style={{ fontSize: '2rem' }}>⏱️</div>
-          <h3 style={{ margin: 0, color: '#2980b9' }}>Estacionamiento</h3>
-        </div>
-
-        <div style={estiloTarjeta} onClick={() => navigate('saldo')}>
-          <div style={{ fontSize: '2rem' }}>💰</div>
-          <h3 style={{ margin: 0, color: '#2980b9' }}>Billetera Virtual</h3>
-        </div>
-
-        <div style={estiloTarjeta} onClick={() => navigate('multas')}>
-          <div style={{ fontSize: '2rem' }}>📄</div>
-          <h3 style={{ margin: 0, color: '#2980b9' }}>Infracciones</h3>
-        </div>
-
-      </div>
+      <motion.div className="modulos-lista" variants={lista} initial="hidden" animate="show">
+        {modulos.map(m => (
+          <motion.div
+            key={m.ruta}
+            variants={item}
+            className="modulo-item"
+            style={{ '--accent': m.accent } as React.CSSProperties}
+            onClick={() => navigate(m.ruta)}
+          >
+            <div className={`modulo-item-icono ${m.color}`}>{m.icono}</div>
+            <div className="modulo-item-texto">
+              <div className="modulo-item-titulo">{m.titulo}</div>
+              <div className="modulo-item-desc">{m.desc}</div>
+            </div>
+            <span className="modulo-item-flecha">›</span>
+          </motion.div>
+        ))}
+      </motion.div>
     </div>
   );
 }

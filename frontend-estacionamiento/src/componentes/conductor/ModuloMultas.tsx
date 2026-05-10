@@ -1,111 +1,108 @@
+// src/componentes/conductor/ModuloMultas.tsx
 import { useState, useEffect } from 'react';
-import { ConductorService } from '../../servicios/conductor-servicio';
+import { useAuth } from '@clerk/clerk-react';
+import { crearConductorService } from '../../servicios/conductor-servicio';
 import type { Multa } from '../../types/conductor-interface';
 
 export function ModuloMultas() {
+  const { getToken } = useAuth();
   const [multas, setMultas] = useState<Multa[]>([]);
-  const [cargando, setCargando] = useState<boolean>(true);
+  const [cargando, setCargando] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [procesandoPagoId, setProcesandoPagoId] = useState<string | null>(null);
+  const [procesandoId, setProcesandoId] = useState<string | null>(null);
 
   const cargarDatos = async () => {
     setCargando(true);
     setError(null);
     try {
-      const data = await ConductorService.obtenerMultas();
-      setMultas(data);
-    } catch (err) {
-      setError('Falla al recuperar el historial de infracciones.');
-    } finally {
-      setCargando(false);
-    }
+      const token = await getToken();
+      setMultas(await crearConductorService(token).obtenerMultas());
+    } catch { setError('No se pudo obtener el historial de infracciones.'); }
+    finally { setCargando(false); }
   };
 
-  useEffect(() => {
-    cargarDatos();
-  }, []);
+  useEffect(() => { cargarDatos(); }, []);
 
-  const manejarPagoLocal = async (idMulta: string) => {
-    if (!window.confirm('¿Desea cancelar esta infracción debitando de su saldo virtual?')) return;
-    
-    setProcesandoPagoId(idMulta);
-    setError(null);
+  const pagar = async (id: string) => {
+    if (!confirm('¿Confirmar pago de esta infracción con tu saldo virtual?')) return;
+    setProcesandoId(id);
     try {
-      await ConductorService.pagarMulta(idMulta);
-      await cargarDatos(); // Sincronización del estado de la vista
-    } catch (err: any) {
-      setError(err.message || 'Error en la liquidación de la multa.');
-    } finally {
-      setProcesandoPagoId(null);
-    }
+      const token = await getToken();
+      await crearConductorService(token).pagarMulta(id);
+      cargarDatos();
+    } catch (err: any) { setError(err.message); }
+    finally { setProcesandoId(null); }
   };
 
-  if (cargando) return <div style={{ textAlign: 'center', padding: '2rem', color: '#7f8c8d' }}>Obteniendo registros...</div>;
+  if (cargando) return <div className="spinner-wrap"><div className="spinner" /></div>;
+
+  const pendientes = multas.filter(m => m.estado === 'PENDIENTE');
+  const pagadas    = multas.filter(m => m.estado === 'PAGADA');
 
   return (
-    <div style={{ padding: '1rem', backgroundColor: '#ffffff', borderRadius: '8px', boxShadow: '0 2px 4px rgba(0,0,0,0.05)' }}>
-      <h3 style={{ marginTop: 0, color: '#2c3e50', borderBottom: '2px solid #ecf0f1', paddingBottom: '0.5rem' }}>
-        Estado de Infracciones
-      </h3>
+    <div>
+      <h2 className="seccion-titulo">Infracciones</h2>
 
-      {error && (
-        <div style={{ backgroundColor: '#fadbd8', color: '#c0392b', padding: '0.8rem', borderRadius: '4px', marginBottom: '1rem', border: '1px solid #e74c3c' }}>
-          {error}
-        </div>
-      )}
+      {error && <div className="alerta alerta-error" style={{ marginBottom: '1rem' }}>{error}</div>}
 
       {multas.length === 0 ? (
-        <p style={{ textAlign: 'center', color: '#7f8c8d', padding: '2rem 0' }}>El historial de infracciones asociado a sus vehículos se encuentra vacío.</p>
-      ) : (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-          {multas.map(multa => (
-            <div key={multa.id} style={{ 
-              padding: '1.2rem', 
-              border: '1px solid #ecf0f1', 
-              borderLeft: `5px solid ${multa.estado === 'PAGADA' ? '#2ecc71' : '#e74c3c'}`, 
-              borderRadius: '6px', 
-              backgroundColor: '#fdfdfe' 
-            }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
-                <span style={{ fontWeight: 'bold', fontSize: '1.1rem', color: '#2c3e50' }}>Patente: {multa.patente}</span>
-                <span style={{ 
-                  color: multa.estado === 'PAGADA' ? '#27ae60' : '#c0392b', 
-                  fontWeight: 'bold', 
-                  fontSize: '0.85rem',
-                  backgroundColor: multa.estado === 'PAGADA' ? '#d5f5e3' : '#fadbd8',
-                  padding: '0.3rem 0.6rem',
-                  borderRadius: '4px'
-                }}>
-                  {multa.estado}
-                </span>
-              </div>
-              <p style={{ margin: '0 0 1rem 0', color: '#7f8c8d', fontSize: '0.95rem' }}>{multa.motivo}</p>
-              
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <span style={{ fontWeight: 'bold', fontSize: '1.3rem', color: '#34495e' }}>${multa.monto.toFixed(2)}</span>
-                
-                {multa.estado === 'PENDIENTE' && (
-                  <button 
-                    onClick={() => manejarPagoLocal(multa.id)}
-                    disabled={procesandoPagoId === multa.id}
-                    style={{ 
-                      padding: '0.6rem 1rem', 
-                      backgroundColor: '#f39c12', 
-                      color: '#fff', 
-                      border: 'none', 
-                      borderRadius: '4px', 
-                      fontWeight: 'bold', 
-                      cursor: procesandoPagoId === multa.id ? 'wait' : 'pointer',
-                      opacity: procesandoPagoId === multa.id ? 0.7 : 1
-                    }}
-                  >
-                    Abonar Infracción
-                  </button>
-                )}
-              </div>
-            </div>
-          ))}
+        <div className="estado-vacio">
+          <div className="estado-vacio-icono">✅</div>
+          <p>No tenés infracciones registradas.</p>
         </div>
+      ) : (
+        <>
+          {pendientes.length > 0 && (
+            <>
+              <p style={{ fontSize: '0.78rem', fontWeight: 700, color: 'var(--gris-500)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '0.625rem' }}>
+                Pendientes ({pendientes.length})
+              </p>
+              <div className="lista" style={{ marginBottom: '1.5rem' }}>
+                {pendientes.map(m => (
+                  <div key={m.id} className="card" style={{ borderLeft: '3px solid var(--rojo)' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '0.625rem' }}>
+                      <span className="lista-item-titulo">{m.patente}</span>
+                      <span style={{ fontWeight: 700, fontSize: '1.1rem', color: 'var(--rojo)' }}>
+                        ${m.monto.toLocaleString()}
+                      </span>
+                    </div>
+                    <p style={{ fontSize: '0.85rem', color: 'var(--gris-500)', marginBottom: '0.875rem' }}>{m.motivo}</p>
+                    <button
+                      className="btn btn-peligro btn-ancho"
+                      style={{ height: '40px' }}
+                      onClick={() => pagar(m.id)}
+                      disabled={procesandoId === m.id}
+                    >
+                      {procesandoId === m.id ? 'Procesando...' : 'Pagar infracción'}
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </>
+          )}
+
+          {pagadas.length > 0 && (
+            <>
+              <p style={{ fontSize: '0.78rem', fontWeight: 700, color: 'var(--gris-500)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '0.625rem' }}>
+                Historial pagadas ({pagadas.length})
+              </p>
+              <div className="lista">
+                {pagadas.map(m => (
+                  <div key={m.id} className="lista-item">
+                    <div className="lista-item-izq">
+                      <span className="lista-item-titulo">{m.patente}</span>
+                      <span className="lista-item-subtitulo">{m.motivo}</span>
+                    </div>
+                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '0.3rem' }}>
+                      <span style={{ fontWeight: 600, color: 'var(--gris-500)' }}>${m.monto.toLocaleString()}</span>
+                      <span className="badge badge-verde">Pagada</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </>
+          )}
+        </>
       )}
     </div>
   );

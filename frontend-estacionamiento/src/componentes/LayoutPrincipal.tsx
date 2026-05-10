@@ -1,10 +1,12 @@
+// src/componentes/LayoutPrincipal.tsx
 import { type ReactNode } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useClerk } from '@clerk/clerk-react';
+import { motion, AnimatePresence } from 'framer-motion';
 
 interface LayoutProps {
   titulo: string;
-  rutaInicio: string; // Ej: '/conductor', '/admin'
+  rutaInicio: string;
   children: ReactNode;
 }
 
@@ -12,41 +14,43 @@ export function LayoutPrincipal({ titulo, rutaInicio, children }: LayoutProps) {
   const { signOut } = useClerk();
   const navigate = useNavigate();
   const location = useLocation();
-
-  const manejarCierreSesion = () => {
-    signOut(() => navigate('/', { replace: true }));
-  };
-
-  // Determina si el usuario está en un submódulo para mostrar el botón "Volver"
-  const mostrarBotonVolver = location.pathname !== rutaInicio;
+  const mostrarVolver = location.pathname !== rutaInicio;
 
   return (
-    <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', backgroundColor: '#f5f6fa', fontFamily: 'system-ui, sans-serif' }}>
-      
-      {/* Cabecera PWA (Adaptable a Mobile) */}
-      <header style={{ backgroundColor: '#2c3e50', color: '#ffffff', padding: '1rem', display: 'flex', flexDirection: 'column', gap: '1rem', boxShadow: '0 2px 4px rgba(0,0,0,0.1)' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <h1 style={{ margin: 0, fontSize: '1.2rem' }}>{titulo}</h1>
-          <button 
-            onClick={manejarCierreSesion} 
-            style={{ padding: '0.4rem 0.8rem', backgroundColor: '#e74c3c', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold', fontSize: '0.85rem' }}
-          >
-            Salir
-          </button>
+    <div className="app-layout">
+      <header className="app-header">
+        <div className="app-header-izq">
+          <AnimatePresence>
+            {mostrarVolver && (
+              <motion.button
+                initial={{ opacity: 0, x: -10 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: -10 }}
+                transition={{ duration: 0.18 }}
+                className="app-header-volver"
+                onClick={() => navigate(rutaInicio)}
+                aria-label="Volver al menú"
+              >
+                ←
+              </motion.button>
+            )}
+          </AnimatePresence>
+          <span className="app-header-titulo">{titulo}</span>
         </div>
-        
-        {mostrarBotonVolver && (
-          <button 
-            onClick={() => navigate(rutaInicio)}
-            style={{ alignSelf: 'flex-start', padding: '0.4rem 0.8rem', backgroundColor: '#34495e', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '0.85rem' }}
-          >
-            ← Volver al Menú
-          </button>
-        )}
+        <button className="btn-salir" onClick={() => signOut(() => navigate('/', { replace: true }))}>
+          Salir
+        </button>
       </header>
 
-      <main style={{ padding: '1.5rem', flex: 1, maxWidth: '800px', margin: '0 auto', width: '100%', boxSizing: 'border-box' }}>
-        {children}
+      <main className="app-main">
+        <motion.div
+          key={location.pathname}
+          initial={{ opacity: 0, y: 12 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.22, ease: 'easeOut' }}
+        >
+          {children}
+        </motion.div>
       </main>
     </div>
   );
