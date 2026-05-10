@@ -1,3 +1,4 @@
+import 'dotenv/config';
 import express, { Request, Response } from 'express';
 import { PrismaClient } from '@prisma/client';
 import { clerkClient, clerkMiddleware } from '@clerk/express';
@@ -32,9 +33,12 @@ app.use(clerkMiddleware());
 
 //INTENTO CREAR UN USUARIO SI ES LA PRIMERA VEZ QUE INICIA SESIÓN ESTE POST NO BORRAR, ESTA FUNCIONANDO. faltaria realocar.
 app.post('/api/usuarios/sync', async (req: Request, res: Response) => {
-  const { clerk_id, email } = req.body; // Estos vienen del frontend tras el login
+  console.log("--- RECIBIDA PETICIÓN DE SYNC ---");
+  console.log("Body:", req.body);
+  const { clerk_id, email } = req.body; 
 
   try {
+    console.log("Buscando/Upserting usuario:", clerk_id);
     const usuario = await prisma.usuario.upsert({
       where: { clerk_id: clerk_id },
       update: {}, // Si ya existe, no hace nada
@@ -59,6 +63,7 @@ app.post('/api/usuarios/sync', async (req: Request, res: Response) => {
 
     res.json(usuario);
   } catch (error) {
+    console.error("ERROR EN SYNC:", error);
     res.status(500).json({ error: "Error al sincronizar usuario" });
   }
 });
