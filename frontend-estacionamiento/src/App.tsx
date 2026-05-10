@@ -24,6 +24,7 @@ import {ModuloMultas} from './componentes/conductor/ModuloMultas';
 
 // Módulos de Dominio: Inspector
 import ModuloVerificarPatente from './componentes/inspector/ModuloVerificarPatente';
+import Sincronizando from './paginas/sincronizado';
 
 export type RolUsuario = 'ADMINISTRADOR' | 'INSPECTOR' | 'CONDUCTOR';
 
@@ -33,22 +34,25 @@ export default function App() {
       <BrowserRouter>
         <Routes>
           {/* Ruta Base: Autenticación Delegada a Clerk */}
-        <Route path="/" element={
-          <>
-            <SignedOut>
-              {/* Clerk renderiza su propio formulario de login aquí. 
-                  routing="hash" evita conflictos con react-router-dom */}
-              <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
-                <SignIn routing="hash" />
+          {/* Ruta Base: Autenticación */}
+          <Route path="/" element={
+           <>
+              <SignedOut>
+                <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
+                  {/* forceRedirectUrl manda al usuario a la zona de tránsito al loguearse */}
+                <SignIn routing="hash" forceRedirectUrl="/sincronizando" fallbackRedirectUrl="/sincronizando" />
               </div>
-            </SignedOut>
+              </SignedOut>
             
-            <SignedIn>
-              {/* Si el usuario ya está logueado, lo mandamos a su panel por defecto. */}
-              <Navigate to="/conductor" replace />
-            </SignedIn>
-          </>
-        } />
+              <SignedIn>
+                {/* Si ya está logueado y entra a la raíz, lo mandamos a sincronizar por las dudas */}
+                <Navigate to="/sincronizando" replace />
+              </SignedIn>
+            </>
+          } />
+
+        {/* ZONA DE TRÁNSITO (Sin RutaProtegida) */}
+        <Route path="/sincronizando" element={<Sincronizando />} />
 
           {/* Subsistema: Administración Central */}
           <Route path="/admin" element={
