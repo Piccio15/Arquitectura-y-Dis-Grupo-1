@@ -1,9 +1,9 @@
 import { Outlet } from 'react-router-dom';
 import { LayoutPrincipal } from '../componentes/LayoutPrincipal';
-import { useUser } from "@clerk/clerk-react";
-import { useEffect } from "react";
+import { useSincronizacion } from '../servicios/useSincronizacion';
 
 export default function VistaConductor() {
+  useSincronizacion();
 
   return (
     <LayoutPrincipal titulo="Portal del Conductor" rutaInicio="/conductor">

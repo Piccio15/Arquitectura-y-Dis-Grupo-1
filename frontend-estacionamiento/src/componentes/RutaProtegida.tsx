@@ -2,40 +2,20 @@ import { useAuth, useUser } from '@clerk/clerk-react';
 import { Navigate } from 'react-router-dom';
 import type { RolUsuario } from '../App';
 
-interface Props {
-  children: React.ReactNode;
-  rolRequerido: RolUsuario;
-}
-
-export function RutaProtegida({ children, rolRequerido }: Props) {
+export function RutaProtegida({ children, rolRequerido }: { children: React.ReactNode, rolRequerido: RolUsuario }) {
   const { isLoaded, isSignedIn } = useAuth();
   const { user } = useUser();
 
-  // 1. Mientras Clerk está cargando la sesión, no mostramos nada 
-  // (Esto evita el error de resolveDispatcher null)
-  if (!isLoaded) {
-    return <div style={{ display: 'flex', justifyContent: 'center', marginTop: '50px' }}>Cargando sesión...</div>;
-  }
+  if (!isLoaded) return <div className="login-container">Cargando permisos...</div>;
+  if (!isSignedIn) return <Navigate to="/" replace />;
 
-  // 2. Si no está logueado, mandarlo al login
-  if (!isSignedIn) {
-    return <Navigate to="/" replace />;
-  }
-
-  // 3. Verificación de Rol (usando la metadata de Clerk que hablamos)
-  // Por ahora, si no configuraron metadata, pueden comentar este bloque 
-  // para testear que al menos entran a la app.
-  const rolDelUsuario = user?.publicMetadata?.role as RolUsuario;
+  const rolDelUsuario = (user?.publicMetadata?.role as RolUsuario) || 'CONDUCTOR';
 
   if (rolDelUsuario !== rolRequerido) {
-    console.warn(`Intento de acceso no autorizado. Requerido: ${rolRequerido}, Tiene: ${rolDelUsuario}`);
-    
-    // Redirigir según el rol que SÍ tiene para que no quede atrapado
-    if (rolDelUsuario === 'ADMINISTRADOR') return <Navigate to="/admin" replace />;
-    if (rolDelUsuario === 'INSPECTOR') return <Navigate to="/inspector" replace />;
-    return <Navigate to="/conductor" replace />;
+    // Si el rol no coincide, lo mandamos a su home correspondiente para que no vea blanco
+    const rutaDestino = rolDelUsuario === 'ADMINISTRADOR' ? '/admin' : rolDelUsuario === 'INSPECTOR' ? '/inspector' : '/conductor';
+    return <Navigate to={rutaDestino} replace />;
   }
   
- 
   return <>{children}</>;
 }

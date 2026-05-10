@@ -18,3 +18,9 @@ export const InspectorService = {
     });
   }
 };
+export const crearInspectorService = (_token: string | null) => ({
+  ...InspectorService,
+  emitirMulta: async (patente: string, motivo: string, monto: number): Promise<void> => {
+    await apiClient('/inspeccion/multar', { method: 'POST', body: JSON.stringify({ patente, motivo, monto }) });
+  }
+});

@@ -108,3 +108,5 @@ export const ConductorService = {
     if (!response.ok) throw new Error('Error al procesar el pago de la infracción. Saldo insuficiente o infracción no válida.');
   }
 };
+// Alias para compatibilidad con los módulos rediseñados
+export const crearConductorService = (_token: string | null) => ConductorService;

@@ -1,40 +1,97 @@
+// src/componentes/conductor/ModuloEstacionamiento.tsx
 import { useState, useEffect } from 'react';
-import { ConductorService } from '../../servicios/conductor-servicio';
+import { useAuth } from '@clerk/clerk-react';
+import { crearConductorService } from '../../servicios/conductor-servicio';
 import type { SesionActiva } from '../../types/conductor-interface';
 
+function TiempoTranscurrido({ desde }: { desde: string }) {
+  const inicio = new Date(desde).getTime();
+  const [ahora, setAhora] = useState(Date.now());
+
+  useEffect(() => {
+    const id = setInterval(() => setAhora(Date.now()), 1000);
+    return () => clearInterval(id);
+  }, []);
+
+  const segs = Math.floor((ahora - inicio) / 1000);
+  const hh = Math.floor(segs / 3600).toString().padStart(2, '0');
+  const mm = Math.floor((segs % 3600) / 60).toString().padStart(2, '0');
+  const ss = (segs % 60).toString().padStart(2, '0');
+
+  return <span style={{ fontFamily: 'var(--fuente-mono)', fontWeight: 700, fontSize: '1.3rem', color: 'var(--azul)' }}>{hh}:{mm}:{ss}</span>;
+}
+
 export default function ModuloEstacionamiento() {
+  const { getToken } = useAuth();
   const [sesiones, setSesiones] = useState<SesionActiva[]>([]);
+  const [cargando, setCargando] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [finalizando, setFinalizando] = useState<string | null>(null);
 
   const cargarSesiones = async () => {
-    const datos = await ConductorService.obtenerSesiones();
-    setSesiones(datos || []);
+    try {
+      setCargando(true);
+      const token = await getToken();
+      const datos = await crearConductorService(token).obtenerSesiones();
+      setSesiones(datos || []);
+    } catch (err: any) { setError(err.message); }
+    finally { setCargando(false); }
   };
 
   useEffect(() => { cargarSesiones(); }, []);
 
   const finalizar = async (id: string) => {
-    await ConductorService.finalizarSesion(id);
-    cargarSesiones();
+    setFinalizando(id);
+    try {
+      const token = await getToken();
+      await crearConductorService(token).finalizarSesion(id);
+      cargarSesiones();
+    } catch (err: any) { setError(err.message); }
+    finally { setFinalizando(null); }
   };
+
+  if (cargando) return <div className="spinner-wrap"><div className="spinner" /></div>;
 
   return (
     <div>
-      <h2 style={{ marginTop: 0, color: '#2c3e50', borderBottom: '2px solid #ecf0f1', paddingBottom: '0.5rem' }}>Estacionamiento Activo</h2>
+      <h2 className="seccion-titulo">Estacionamiento Activo</h2>
+
+      {error && <div className="alerta alerta-error" style={{ marginBottom: '1rem' }}>{error}</div>}
+
       {sesiones.length === 0 ? (
-        <p style={{ color: '#7f8c8d' }}>No posee sesiones de estacionamiento en curso.</p>
+        <div className="estado-vacio">
+          <div className="estado-vacio-icono">⏱️</div>
+          <p>No tenés sesiones activas en este momento.</p>
+        </div>
       ) : (
-        <ul style={{ listStyle: 'none', padding: 0 }}>
+        <div className="lista">
           {sesiones.map(s => (
-            <li key={s.id} style={{ padding: '1.5rem', border: '1px solid #3498db', borderLeft: '5px solid #3498db', borderRadius: '4px', marginBottom: '1rem' }}>
-              <strong>Patente: {s.patente}</strong><br/>
-              Zona ID: {s.idZona}<br/>
-              Inicio: {new Date(s.horaInicio).toLocaleTimeString()}<br/>
-              <button onClick={() => finalizar(s.id)} style={{ marginTop: '1rem', padding: '0.5rem 1rem', backgroundColor: '#e74c3c', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer' }}>
-                Finalizar Estacionamiento
+            <div key={s.id} className="card" style={{ borderLeft: '3px solid var(--azul)' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '0.875rem' }}>
+                <div>
+                  <span className="lista-item-titulo">{s.patente}</span>
+                  <div style={{ fontSize: '0.8rem', color: 'var(--gris-500)', marginTop: '0.2rem' }}>
+                    Zona: {s.idZona}
+                  </div>
+                </div>
+                <span className="badge badge-azul" style={{ background: 'var(--azul-claro)', color: 'var(--azul)' }}>Activo</span>
+              </div>
+
+              <div style={{ textAlign: 'center', padding: '0.75rem 0', borderTop: '1px solid var(--gris-100)', borderBottom: '1px solid var(--gris-100)', marginBottom: '0.875rem' }}>
+                <div style={{ fontSize: '0.72rem', color: 'var(--gris-500)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '0.3rem' }}>Tiempo transcurrido</div>
+                <TiempoTranscurrido desde={s.horaInicio} />
+              </div>
+
+              <button
+                className="btn btn-peligro btn-ancho"
+                onClick={() => finalizar(s.id)}
+                disabled={finalizando === s.id}
+              >
+                {finalizando === s.id ? 'Finalizando...' : 'Finalizar Estacionamiento'}
               </button>
-            </li>
+            </div>
           ))}
-        </ul>
+        </div>
       )}
     </div>
   );

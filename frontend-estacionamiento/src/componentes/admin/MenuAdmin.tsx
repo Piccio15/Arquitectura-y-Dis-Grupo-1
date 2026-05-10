@@ -1,45 +1,51 @@
+// src/componentes/admin/MenuAdmin.tsx
 import { useNavigate } from 'react-router-dom';
+import { useUser } from '@clerk/clerk-react';
+import { motion } from 'framer-motion';
+
+const item  = { hidden: { opacity: 0, x: -16 }, show: { opacity: 1, x: 0 } };
+const lista = { hidden: {}, show: { transition: { staggerChildren: 0.07 } } };
 
 export default function MenuAdmin() {
   const navigate = useNavigate();
+  const { user } = useUser();
+  const nombre = user?.firstName || 'Admin';
 
-  const estiloTarjeta = {
-    backgroundColor: '#ffffff',
-    padding: '2.5rem 1rem',
-    borderRadius: '8px',
-    boxShadow: '0 4px 6px rgba(0,0,0,0.1)',
-    textAlign: 'center' as const,
-    cursor: 'pointer',
-    border: '1px solid #e0e0e0',
-    display: 'flex',
-    flexDirection: 'column' as const,
-    alignItems: 'center',
-    justifyContent: 'center'
-  };
+  const modulos = [
+    { ruta: 'zonas',       icono: '🗺️', color: 'azul',  titulo: 'Zonas de Estacionamiento', desc: 'Crear, editar y administrar áreas', accent: '#2563eb' },
+    { ruta: 'inspectores', icono: '👮', color: 'verde', titulo: 'Inspectores',               desc: 'Gestionar agentes de tránsito',    accent: '#16a34a' },
+  ];
 
   return (
     <div>
-      <h2 style={{ color: '#2c3e50', marginTop: 0, marginBottom: '1.5rem', fontSize: '1.3rem' }}>
-        Seleccione un módulo administrativo
-      </h2>
-      
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '1.5rem' }}>
-        
-        <div style={estiloTarjeta} onClick={() => navigate('zonas')}>
-          <h3 style={{ margin: 0, color: '#27ae60' }}>Gestionar Zonas</h3>
-          <p style={{ margin: '0.5rem 0 0 0', color: '#7f8c8d', fontSize: '0.9rem' }}>
-            Configuración cartográfica y tarifas
-          </p>
-        </div>
+      <motion.div
+        initial={{ opacity: 0, y: -8 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.25 }}
+        className="menu-hero"
+      >
+        <h2>Panel de Administración</h2>
+        <p>Bienvenido, {nombre}</p>
+      </motion.div>
 
-        <div style={estiloTarjeta} onClick={() => navigate('inspectores')}>
-          <h3 style={{ margin: 0, color: '#2980b9' }}>Gestionar Inspectores</h3>
-          <p style={{ margin: '0.5rem 0 0 0', color: '#7f8c8d', fontSize: '0.9rem' }}>
-            Alta y asignación de personal
-          </p>
-        </div>
-
-      </div>
+      <motion.div className="modulos-lista" variants={lista} initial="hidden" animate="show">
+        {modulos.map(m => (
+          <motion.div
+            key={m.ruta}
+            variants={item}
+            className="modulo-item"
+            style={{ '--accent': m.accent } as React.CSSProperties}
+            onClick={() => navigate(m.ruta)}
+          >
+            <div className={`modulo-item-icono ${m.color}`}>{m.icono}</div>
+            <div className="modulo-item-texto">
+              <div className="modulo-item-titulo">{m.titulo}</div>
+              <div className="modulo-item-desc">{m.desc}</div>
+            </div>
+            <span className="modulo-item-flecha">›</span>
+          </motion.div>
+        ))}
+      </motion.div>
     </div>
   );
 }

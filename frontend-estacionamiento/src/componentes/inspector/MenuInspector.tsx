@@ -1,38 +1,44 @@
+// src/componentes/inspector/MenuInspector.tsx
 import { useNavigate } from 'react-router-dom';
+import { useUser } from '@clerk/clerk-react';
+import { motion } from 'framer-motion';
 
 export default function MenuInspector() {
   const navigate = useNavigate();
-
-  const estiloTarjeta = {
-    backgroundColor: '#ffffff',
-    padding: '2.5rem 1rem',
-    borderRadius: '8px',
-    boxShadow: '0 4px 6px rgba(0,0,0,0.1)',
-    textAlign: 'center' as const,
-    cursor: 'pointer',
-    border: '1px solid #e0e0e0',
-    display: 'flex',
-    flexDirection: 'column' as const,
-    alignItems: 'center',
-    justifyContent: 'center'
-  };
+  const { user } = useUser();
+  const nombre = user?.firstName || 'Inspector';
 
   return (
     <div>
-      <h2 style={{ color: '#2c3e50', marginTop: 0, marginBottom: '1.5rem', fontSize: '1.3rem' }}>
-        Operaciones de Vía Pública
-      </h2>
-      
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '1.5rem' }}>
-        
-        <div style={estiloTarjeta} onClick={() => navigate('verificar')}>
-          <h3 style={{ margin: 0, color: '#e67e22' }}>Verificar Patente</h3>
-          <p style={{ margin: '0.5rem 0 0 0', color: '#7f8c8d', fontSize: '0.9rem' }}>
-            Consulta de estado de estacionamiento y emisión de actas
-          </p>
-        </div>
+      <motion.div
+        initial={{ opacity: 0, y: -8 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.25 }}
+        className="menu-hero"
+      >
+        <h2>Terminal de Inspección</h2>
+        <p>Hola, {nombre} — Operaciones de vía pública</p>
+      </motion.div>
 
-      </div>
+      <motion.div
+        className="modulos-lista"
+        initial={{ opacity: 0, x: -16 }}
+        animate={{ opacity: 1, x: 0 }}
+        transition={{ delay: 0.1, duration: 0.22 }}
+      >
+        <div
+          className="modulo-item"
+          style={{ '--accent': '#ea580c' } as React.CSSProperties}
+          onClick={() => navigate('verificar')}
+        >
+          <div className="modulo-item-icono naranja">🔍</div>
+          <div className="modulo-item-texto">
+            <div className="modulo-item-titulo">Verificar Patente</div>
+            <div className="modulo-item-desc">Consultá el estado de un vehículo y emití infracciones</div>
+          </div>
+          <span className="modulo-item-flecha">›</span>
+        </div>
+      </motion.div>
     </div>
   );
 }

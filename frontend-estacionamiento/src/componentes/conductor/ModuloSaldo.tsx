@@ -1,81 +1,78 @@
+// src/componentes/conductor/ModuloSaldo.tsx
 import { useState } from 'react';
-import { ConductorService } from '../../servicios/conductor-servicio';
+import { useAuth } from '@clerk/clerk-react';
+import { crearConductorService } from '../../servicios/conductor-servicio';
+
+const MONTOS_RAPIDOS = [500, 1000, 2000, 5000];
 
 export function ModuloSaldo() {
+  const { getToken } = useAuth();
   const [monto, setMonto] = useState<number>(1000);
-  const [procesando, setProcesando] = useState<boolean>(false);
+  const [procesando, setProcesando] = useState(false);
   const [mensaje, setMensaje] = useState<{ texto: string; tipo: 'error' | 'exito' } | null>(null);
 
   const manejarTransaccion = async (e: React.FormEvent) => {
     e.preventDefault();
     setProcesando(true);
     setMensaje(null);
-
     try {
-      await ConductorService.cargarSaldo(monto);
-      setMensaje({ texto: `Se ha acreditado exitosamente un saldo de $${monto.toFixed(2)}.`, tipo: 'exito' });
-      setMonto(1000); // Reseteo del estado local
+      const token = await getToken();
+      await crearConductorService(token).cargarSaldo(monto);
+      setMensaje({ texto: `✓ Se acreditaron $${monto.toLocaleString()} a tu billetera.`, tipo: 'exito' });
+      setMonto(1000);
     } catch (err: any) {
       setMensaje({ texto: err.message || 'Error en la pasarela de pagos.', tipo: 'error' });
-    } finally {
-      setProcesando(false);
-    }
+    } finally { setProcesando(false); }
   };
 
   return (
-    <div style={{ padding: '1.5rem', backgroundColor: '#ffffff', borderRadius: '8px', boxShadow: '0 2px 4px rgba(0,0,0,0.05)' }}>
-      <h3 style={{ marginTop: 0, color: '#2c3e50', borderBottom: '2px solid #ecf0f1', paddingBottom: '0.5rem' }}>
-        Recarga de Billetera Virtual
-      </h3>
+    <div>
+      <h2 className="seccion-titulo">Recargar Billetera</h2>
 
       {mensaje && (
-        <div style={{ 
-          padding: '1rem', 
-          marginBottom: '1rem', 
-          borderRadius: '4px', 
-          backgroundColor: mensaje.tipo === 'error' ? '#fadbd8' : '#d5f5e3', 
-          color: mensaje.tipo === 'error' ? '#c0392b' : '#27ae60',
-          border: `1px solid ${mensaje.tipo === 'error' ? '#e74c3c' : '#2ecc71'}`
-        }}>
+        <div className={`alerta alerta-${mensaje.tipo}`} style={{ marginBottom: '1rem' }}>
           {mensaje.texto}
         </div>
       )}
 
-      <form onSubmit={manejarTransaccion} style={{ display: 'flex', flexDirection: 'column', gap: '1.2rem' }}>
-        <div>
-          <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 'bold', color: '#34495e', fontSize: '0.9rem' }}>
-            Monto a recargar (ARS)
-          </label>
-          <input 
-            type="number" 
-            min="100" 
-            step="100" 
-            value={monto} 
-            onChange={(e) => setMonto(Number(e.target.value))} 
-            disabled={procesando}
-            required 
-            style={{ width: '100%', padding: '1rem', borderRadius: '4px', border: '1px solid #bdc3c7', fontSize: '1.2rem', fontWeight: 'bold', color: '#2c3e50', boxSizing: 'border-box' }}
-          />
+      <div className="card">
+        <p style={{ fontSize: '0.82rem', color: 'var(--gris-500)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.625rem' }}>
+          Monto rápido
+        </p>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '0.5rem', marginBottom: '1.25rem' }}>
+          {MONTOS_RAPIDOS.map(m => (
+            <button
+              key={m}
+              type="button"
+              className={`btn ${monto === m ? 'btn-primario' : 'btn-secundario'}`}
+              style={{ height: '40px', fontSize: '0.85rem' }}
+              onClick={() => setMonto(m)}
+            >
+              ${m.toLocaleString()}
+            </button>
+          ))}
         </div>
 
-        <button 
-          type="submit" 
-          disabled={procesando}
-          style={{ 
-            padding: '1rem', 
-            backgroundColor: '#009ee3', // Color característico de pasarelas de pago 
-            color: '#ffffff', 
-            border: 'none', 
-            borderRadius: '4px', 
-            fontWeight: 'bold', 
-            fontSize: '1rem', 
-            cursor: procesando ? 'wait' : 'pointer',
-            opacity: procesando ? 0.7 : 1
-          }}
-        >
-          {procesando ? 'Procesando pago...' : 'Pagar con MercadoPago'}
-        </button>
-      </form>
+        <form onSubmit={manejarTransaccion} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+          <div className="campo">
+            <label>O ingresá otro monto (ARS)</label>
+            <input
+              type="number"
+              min="100"
+              step="100"
+              value={monto}
+              onChange={e => setMonto(Number(e.target.value))}
+              disabled={procesando}
+              required
+              style={{ fontSize: '1.1rem', fontWeight: 600 }}
+            />
+          </div>
+
+          <button type="submit" className="btn btn-primario btn-ancho" disabled={procesando} style={{ height: '48px', background: '#009ee3' }}>
+            {procesando ? 'Procesando...' : `Pagar $${monto.toLocaleString()} con MercadoPago`}
+          </button>
+        </form>
+      </div>
     </div>
   );
 }
