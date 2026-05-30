@@ -1,2 +1,9 @@
-/*Mapea a "Servicio de multa" en el diagrama de componentes. 
-Gestiona la creación de multas y los cambios de estado a "Pagada". */
+import { Prisma } from '@prisma/client';
+import { MultaRepository } from '../repositories/repository-multa';
+
+export const MultaService = {
+  marcarComoPagada: async (multaId: number, db: Prisma.TransactionClient) => {
+    const resultado = await MultaRepository.marcarComoPagada(multaId, db);
+    return resultado.count === 1;
+  }
+};

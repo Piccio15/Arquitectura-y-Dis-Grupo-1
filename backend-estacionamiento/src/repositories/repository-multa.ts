@@ -1,2 +1,16 @@
-/*Responsabilidad: Abstraer las consultas para crear una nueva infracción y 
-actualizar su estado a "Pagada" en las tablas de la base de datos. */
+import { Prisma } from '@prisma/client';
+import { orm } from './orm-config';
+
+type DatabaseClient = Pick<Prisma.TransactionClient, 'multa'>;
+
+export const MultaRepository = {
+  marcarComoPagada: async (multaId: number, db: DatabaseClient = orm) => {
+    return await db.multa.updateMany({
+      where: {
+        id_multa: multaId,
+        estado: 'PENDIENTE'
+      },
+      data: { estado: 'PAGADA' }
+    });
+  }
+};

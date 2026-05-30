@@ -21,6 +21,17 @@ export const UsuarioRepository = {
     });
   },
 
+  buscarPermisosPorClerkId: async (clerkId: string) => {
+    return await orm.usuario.findUnique({
+      where: { clerk_id: clerkId },
+      select: {
+        id: true,
+        clerk_id: true,
+        rol: true
+      }
+    });
+  },
+
   sincronizarConductor: async (clerkId: string, email: string) => {
     return await orm.usuario.upsert({
       where: { clerk_id: clerkId },

@@ -1,48 +1,61 @@
-import { useEffect } from "react";
-import { useUser } from "@clerk/clerk-react";
-import { useNavigate } from "react-router-dom";
+import { useEffect, useState } from 'react';
+import { useAuth, useUser } from '@clerk/clerk-react';
+import { useNavigate } from 'react-router-dom';
+import type { RolUsuario } from '../App';
+
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
+
+function rutaPorRol(rol: RolUsuario) {
+  if (rol === 'ADMINISTRADOR') return '/admin';
+  if (rol === 'INSPECTOR') return '/inspector';
+  return '/conductor';
+}
 
 export default function Sincronizando() {
+  const { getToken } = useAuth();
   const { isLoaded, user } = useUser();
   const navigate = useNavigate();
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    const syncUsuario = async () => {
-      if (isLoaded && user) {
-        try {
-          // 1. Le avisamos al backend que cree el usuario y actualice Clerk
-          const res = await fetch('http://localhost:3000/api/usuarios/sync', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              clerk_id: user.id,
-              email: user.primaryEmailAddress?.emailAddress
-            })
-          });
+    if (!isLoaded || !user) return;
 
-          if (res.ok) {
-            // 2. CRÍTICO: Obligamos a Clerk a recargar la sesión para que "vea" el nuevo rol
-            await user.reload();
-            
-            // 3. Una vez actualizado, lo mandamos a su panel
-            navigate('/conductor', { replace: true });
-          } else {
-            console.error("Fallo la respuesta del backend");
-          }
-        } catch (error) {
-          console.error("Error de red al sincronizar", error);
+    const sincronizar = async () => {
+      try {
+        const token = await getToken();
+
+        if (!token) {
+          throw new Error('No se pudo obtener el token de Clerk');
         }
+
+        const respuesta = await fetch(`${API_URL}/usuarios/sync`, {
+          method: 'POST',
+          headers: {
+            Authorization: `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          }
+        });
+
+        const datos = await respuesta.json().catch(() => ({}));
+
+        if (!respuesta.ok) {
+          throw new Error(datos.error || 'No se pudo sincronizar el usuario');
+        }
+
+        await user.reload();
+        navigate(rutaPorRol(datos.rol as RolUsuario), { replace: true });
+      } catch (error) {
+        setError(error instanceof Error ? error.message : 'Error inesperado');
       }
     };
 
-    syncUsuario();
-  }, [isLoaded, user, navigate]);
+    void sincronizar();
+  }, [getToken, isLoaded, navigate, user]);
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', marginTop: '100px' }}>
       <h2>Configurando tu cuenta...</h2>
-      <p>Por favor espera un momento.</p>
-      {/* Acá podés poner un spinner de carga lindo si querés */}
+      {error ? <p style={{ color: '#dc2626' }}>{error}</p> : <p>Por favor espera un momento.</p>}
     </div>
   );
 }

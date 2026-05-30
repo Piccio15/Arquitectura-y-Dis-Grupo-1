@@ -1,25 +1,29 @@
+import { useAuth, useUser } from '@clerk/clerk-react';
+import { useEffect } from 'react';
 
-import { useUser } from "@clerk/clerk-react";
-import { useEffect } from "react";
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
 
 export function useSincronizacion() {
+  const { getToken } = useAuth();
   const { isLoaded, user } = useUser();
 
   useEffect(() => {
-    if (isLoaded && user) {
-      console.log("Sincronizando usuario:", user.primaryEmailAddress?.emailAddress);
-      
-      fetch('http://localhost:3000/api/usuarios/sync', {
+    if (!isLoaded || !user) return;
+
+    const sincronizar = async () => {
+      const token = await getToken();
+
+      if (!token) return;
+
+      await fetch(`${API_URL}/usuarios/sync`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          clerk_id: user.id,
-          email: user.primaryEmailAddress?.emailAddress
-        })
-      })
-      .then(res => res.json())
-      .then(data => console.log("Sincronización exitosa:", data))
-      .catch(err => console.error("Error al sincronizar:", err));
-    }
-  }, [isLoaded, user]);
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+    };
+
+    void sincronizar();
+  }, [getToken, isLoaded, user]);
 }

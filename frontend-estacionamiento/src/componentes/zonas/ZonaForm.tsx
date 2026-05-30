@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import type { Zona, ZonaFormData, Coordenada } from '../../types/zona-interface';
 import { MapAdapter } from './Mapadapter'; // Importamos el adaptador
 

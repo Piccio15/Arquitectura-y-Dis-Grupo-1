@@ -1,6 +1,6 @@
 // src/App.tsx
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
-import { SignedIn, SignedOut, SignIn, useUser } from '@clerk/clerk-react';
+import { SignedIn, SignedOut, SignIn } from '@clerk/clerk-react';
 import { RutaProtegida } from './componentes/RutaProtegida';
 
 import DashboardAdmin from './paginas/dashboardAdmin';
@@ -18,19 +18,10 @@ import ModuloEstacionamiento from './componentes/conductor/ModuloEstacionamiento
 import { ModuloSaldo } from './componentes/conductor/ModuloSaldo';
 import { ModuloMultas } from './componentes/conductor/ModuloMultas';
 import ModuloVerificarPatente from './componentes/inspector/ModuloVerificarPatente';
+import Sincronizando from './paginas/sincronizado';
 
 
 export type RolUsuario = 'ADMINISTRADOR' | 'INSPECTOR' | 'CONDUCTOR';
-
-const EnrutadorPorRol = () => {
-  const { user } = useUser();
-  const rol = (user?.publicMetadata?.role as RolUsuario) || 'CONDUCTOR';
-  switch (rol) {
-    case 'ADMINISTRADOR': return <Navigate to="/admin" replace />;
-    case 'INSPECTOR':     return <Navigate to="/inspector" replace />;
-    default:              return <Navigate to="/conductor" replace />;
-  }
-};
 
 const clerkApariencia = {
   layout: { socialButtonsPlacement: 'bottom' as const, shimmer: false },
@@ -107,8 +98,14 @@ export default function App() {
                 </div>
               </div>
             </SignedOut>
-            <SignedIn><EnrutadorPorRol /></SignedIn>
+            <SignedIn><Navigate to="/sincronizando" replace /></SignedIn>
           </>
+        } />
+
+        <Route path="/sincronizando" element={
+          <RutaProtegida>
+            <Sincronizando />
+          </RutaProtegida>
         } />
 
         <Route path="/admin" element={<RutaProtegida rolRequerido="ADMINISTRADOR"><DashboardAdmin /></RutaProtegida>}>

@@ -8,11 +8,12 @@ datasource db {
 }
 
 model conductor {
-  id        Int        @id @default(autoincrement())
-  saldo     Float      @default(0)
-  usuarioId Int        @unique(map: "Conductor_usuarioId_key")
-  usuario   usuario    @relation(fields: [usuarioId], references: [id], map: "Conductor_usuarioId_fkey")
-  vehiculo  vehiculo[]
+  id            Int             @id @default(autoincrement())
+  saldo         Float           @default(0)
+  usuarioId     Int             @unique(map: "Conductor_usuarioId_key")
+  usuario       usuario         @relation(fields: [usuarioId], references: [id], map: "Conductor_usuarioId_fkey")
+  vehiculo      vehiculo[]
+  operacionpago operacionpago[]
 }
 
 model inspector {
@@ -33,19 +34,40 @@ model multa {
   patente     String
   inspector   inspector    @relation(fields: [inspectorId], references: [id], map: "Multa_inspectorId_fkey")
   vehiculo    vehiculo     @relation(fields: [patente], references: [patente], map: "Multa_patente_fkey")
+  operacionpago operacionpago[]
 
   @@index([inspectorId], map: "Multa_inspectorId_fkey")
   @@index([patente], map: "Multa_patente_fkey")
 }
 
+model operacionpago {
+  id                         Int                  @id @default(autoincrement())
+  tipo                       operacionpago_tipo
+  estado                     operacionpago_estado @default(PENDIENTE)
+  monto                      Float
+  fecha_creacion             DateTime             @default(now())
+  fecha_actualizacion        DateTime             @updatedAt
+  conductorId                Int
+  multaId                    Int?
+  mercadoPagoPreferenceId    String?              @unique(map: "OperacionPago_mercadoPagoPreferenceId_key")
+  mercadoPagoPaymentId       String?              @unique(map: "OperacionPago_mercadoPagoPaymentId_key")
+  conductor                  conductor            @relation(fields: [conductorId], references: [id], map: "OperacionPago_conductorId_fkey")
+  multa                      multa?               @relation(fields: [multaId], references: [id_multa], map: "OperacionPago_multaId_fkey")
+
+  @@index([conductorId], map: "OperacionPago_conductorId_fkey")
+  @@index([multaId], map: "OperacionPago_multaId_fkey")
+}
+
 model sesionestacionamiento {
-  id           Int       @id @default(autoincrement())
-  fecha_inicio DateTime  @default(now())
-  fecha_fin    DateTime?
-  patente      String
-  zonaId       Int
-  vehiculo     vehiculo  @relation(fields: [patente], references: [patente], map: "SesionEstacionamiento_patente_fkey")
-  zona         zona      @relation(fields: [zonaId], references: [id], map: "SesionEstacionamiento_zonaId_fkey")
+  id                        Int       @id @default(autoincrement())
+  fecha_inicio              DateTime  @default(now())
+  fecha_fin                 DateTime?
+  duracion_estimada_minutos Int
+  costo_cobrado             Float
+  patente                   String
+  zonaId                    Int
+  vehiculo                  vehiculo  @relation(fields: [patente], references: [patente], map: "SesionEstacionamiento_patente_fkey")
+  zona                      zona      @relation(fields: [zonaId], references: [id], map: "SesionEstacionamiento_zonaId_fkey")
 
   @@index([patente], map: "SesionEstacionamiento_patente_fkey")
   @@index([zonaId], map: "SesionEstacionamiento_zonaId_fkey")
@@ -89,4 +111,16 @@ enum multa_estado {
   PENDIENTE
   PAGADA
   ANULADA
+}
+
+enum operacionpago_tipo {
+  CARGA_SALDO
+  PAGO_MULTA
+}
+
+enum operacionpago_estado {
+  PENDIENTE
+  APROBADA
+  RECHAZADA
+  FALLIDA
 }
