@@ -1,31 +1,47 @@
-/*Responsabilidad: Abstraer las consultas para buscar perfiles de conductor por email, 
-crear nuevos usuarios y actualizar el saldo de la billetera virtual. */
+import { orm } from './orm-config';
 
-// EJEMPLO DE COMO SE APLICARIA EL REPOSITORIO CON ORM
-
-// 1. Se importa la instancia única del ORM (módulo de bajo nivel)
-import { orm } from './orm-config'; 
-
-// 2. Se exporta el Repositorio, el cual será consumido por el Service
 export const UsuarioRepository = {
-  
   buscarPorEmail: async (email: string) => {
-    // El repositorio oculta la sintaxis específica del ORM
     return await orm.usuario.findUnique({
-      where: { email: email }
+      where: { email }
     });
   },
 
-  buscarPorId: async (id: string) => {
+  buscarPorId: async (id: number) => {
     return await orm.usuario.findUnique({
-      where: { id: id }
+      where: { id },
+      include: { conductor: true, inspector: true }
     });
   },
 
-  actualizarSaldo: async (id: string, nuevoSaldo: number) => {
-    // Operación de persistencia abstraída
-    return await orm.usuario.update({
-      where: { id: id },
+  buscarPorClerkId: async (clerkId: string) => {
+    return await orm.usuario.findUnique({
+      where: { clerk_id: clerkId },
+      include: { conductor: true, inspector: true }
+    });
+  },
+
+  sincronizarConductor: async (clerkId: string, email: string) => {
+    return await orm.usuario.upsert({
+      where: { clerk_id: clerkId },
+      update: { email },
+      create: {
+        clerk_id: clerkId,
+        email,
+        // Clerk owns authentication. The DNI is completed later in the profile flow.
+        dni: clerkId,
+        rol: 'CONDUCTOR',
+        conductor: {
+          create: { saldo: 0 }
+        }
+      },
+      include: { conductor: true, inspector: true }
+    });
+  },
+
+  actualizarSaldo: async (usuarioId: number, nuevoSaldo: number) => {
+    return await orm.conductor.update({
+      where: { usuarioId },
       data: { saldo: nuevoSaldo }
     });
   }

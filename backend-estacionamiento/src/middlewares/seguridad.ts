@@ -1,6 +1,13 @@
-/*
-Componente del diagrama: "Servicios de Seguridad (Node.js) ".
-Responsabilidad: Extraer los tokens o credenciales de la petición (JSON/HTTP) y validar si el usuario
-tiene el rol necesario (Administrador, Inspector, Usuario) antes de permitir el paso a la capa de
-presentación.
-*/
+import { getAuth } from '@clerk/express';
+import { NextFunction, Request, Response } from 'express';
+
+export function exigirAutenticacion(req: Request, res: Response, next: NextFunction) {
+  const { userId } = getAuth(req);
+
+  if (!userId) {
+    res.status(401).json({ error: 'Autenticacion requerida' });
+    return;
+  }
+
+  next();
+}
