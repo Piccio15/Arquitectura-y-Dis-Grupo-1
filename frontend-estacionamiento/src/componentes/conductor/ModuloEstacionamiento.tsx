@@ -1,51 +1,111 @@
-// src/componentes/conductor/ModuloEstacionamiento.tsx
 import { useState, useEffect } from 'react';
 import { useAuth } from '@clerk/clerk-react';
 import { crearConductorService } from '../../servicios/conductor-servicio';
-import type { SesionActiva } from '../../types/conductor-interface';
+import type { SesionActiva, Vehiculo } from '../../types/conductor-interface';
 
 function TiempoTranscurrido({ desde }: { desde: string }) {
   const inicio = new Date(desde).getTime();
   const [ahora, setAhora] = useState(Date.now());
-
   useEffect(() => {
     const id = setInterval(() => setAhora(Date.now()), 1000);
     return () => clearInterval(id);
   }, []);
-
   const segs = Math.floor((ahora - inicio) / 1000);
   const hh = Math.floor(segs / 3600).toString().padStart(2, '0');
   const mm = Math.floor((segs % 3600) / 60).toString().padStart(2, '0');
   const ss = (segs % 60).toString().padStart(2, '0');
-
-  return <span style={{ fontFamily: 'var(--fuente-mono)', fontWeight: 700, fontSize: '1.3rem', color: 'var(--azul)' }}>{hh}:{mm}:{ss}</span>;
+  return <span style={{ fontFamily: 'JetBrains Mono, monospace', fontWeight: 700, fontSize: '1.3rem', color: '#1e2d6b' }}>{hh}:{mm}:{ss}</span>;
 }
 
 export default function ModuloEstacionamiento() {
   const { getToken } = useAuth();
   const [sesiones, setSesiones] = useState<SesionActiva[]>([]);
+  const [vehiculos, setVehiculos] = useState<Vehiculo[]>([]);
+  const [zonas, setZonas] = useState<{ id: number; nombre: string; precio_hora: number }[]>([]);
   const [cargando, setCargando] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [finalizando, setFinalizando] = useState<string | null>(null);
+  const [resultado, setResultado] = useState<string | null>(null);
+  const [finalizando, setFinalizando] = useState<number | null>(null);
 
-  const cargarSesiones = async () => {
+  // Form iniciar
+  const [patenteSeleccionada, setPatenteSeleccionada] = useState('');
+  const [zonaSeleccionada, setZonaSeleccionada] = useState('');
+  const [duracion, setDuracion] = useState(60);
+  const [iniciando, setIniciando] = useState(false);
+  const [cotizacion, setCotizacion] = useState<{ costo: number; saldo_suficiente: boolean } | null>(null);
+
+  const cargarDatos = async () => {
     try {
       setCargando(true);
       const token = await getToken();
-      const datos = await crearConductorService(token).obtenerSesiones();
-      setSesiones(datos || []);
+      const svc = crearConductorService(token);
+      const [sesionesData, vehiculosData] = await Promise.all([
+        svc.obtenerSesiones(),
+        svc.obtenerVehiculos(),
+      ]);
+      setSesiones(sesionesData || []);
+      setVehiculos(vehiculosData || []);
     } catch (err: any) { setError(err.message); }
     finally { setCargando(false); }
   };
 
-  useEffect(() => { cargarSesiones(); }, []);
+  const cargarZonas = async () => {
+    try {
+      const res = await fetch('http://localhost:3000/api/zonas', {
+        headers: { Authorization: `Bearer ${await getToken()}` }
+      });
+      const data = await res.json();
+      setZonas(data || []);
+    } catch {}
+  };
 
-  const finalizar = async (id: string) => {
-    setFinalizando(id);
+  useEffect(() => { cargarDatos(); cargarZonas(); }, []);
+
+  const cotizar = async () => {
+    if (!patenteSeleccionada || !zonaSeleccionada) return;
     try {
       const token = await getToken();
-      await crearConductorService(token).finalizarSesion(id);
-      cargarSesiones();
+      const result = await crearConductorService(token).cotizarSesion(
+        patenteSeleccionada, Number(zonaSeleccionada), duracion
+      );
+      setCotizacion(result);
+    } catch (err: any) { setError(err.message); }
+  };
+
+  useEffect(() => {
+    setCotizacion(null);
+    if (patenteSeleccionada && zonaSeleccionada && duracion > 0) cotizar();
+  }, [patenteSeleccionada, zonaSeleccionada, duracion]);
+
+  const iniciar = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError(null);
+    setResultado(null);
+    setIniciando(true);
+    try {
+      const token = await getToken();
+      await crearConductorService(token).iniciarSesion(
+        patenteSeleccionada, Number(zonaSeleccionada), duracion
+      );
+      setPatenteSeleccionada('');
+      setZonaSeleccionada('');
+      setDuracion(60);
+      setCotizacion(null);
+      setResultado('¡Estacionamiento iniciado correctamente!');
+      cargarDatos();
+    } catch (err: any) { setError(err.message); }
+    finally { setIniciando(false); }
+  };
+
+  const finalizar = async (id: number) => {
+    setFinalizando(id);
+    setResultado(null);
+    setError(null);
+    try {
+      const token = await getToken();
+      const res = await crearConductorService(token).finalizarSesion(id);
+      setResultado(`Sesión finalizada. Duración real: ${res.duracion_real_minutos} minutos.`);
+      cargarDatos();
     } catch (err: any) { setError(err.message); }
     finally { setFinalizando(null); }
   };
@@ -54,9 +114,48 @@ export default function ModuloEstacionamiento() {
 
   return (
     <div>
-      <h2 className="seccion-titulo">Estacionamiento Activo</h2>
+      <h2 className="seccion-titulo">Estacionamiento</h2>
+
+      {/* Formulario iniciar */}
+      <div className="card" style={{ marginBottom: '1rem' }}>
+        <h3 style={{ marginBottom: '0.75rem', fontSize: '0.85rem', fontWeight: 700, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+          Iniciar estacionamiento
+        </h3>
+        <form onSubmit={iniciar} style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+          <div className="campo">
+            <label>Vehículo</label>
+            <select value={patenteSeleccionada} onChange={e => setPatenteSeleccionada(e.target.value)} required>
+              <option value="">Seleccioná un vehículo</option>
+              {vehiculos.map(v => <option key={v.patente} value={v.patente}>{v.patente}</option>)}
+            </select>
+          </div>
+          <div className="campo">
+            <label>Zona</label>
+            <select value={zonaSeleccionada} onChange={e => setZonaSeleccionada(e.target.value)} required>
+              <option value="">Seleccioná una zona</option>
+              {zonas.map(z => <option key={z.id} value={z.id}>{z.nombre} — ${z.precio_hora}/hr</option>)}
+            </select>
+          </div>
+          <div className="campo">
+            <label>Duración estimada (minutos)</label>
+            <input type="number" min={15} step={15} value={duracion}
+              onChange={e => setDuracion(Number(e.target.value))} required />
+          </div>
+          {cotizacion && (
+            <div className={`alerta ${cotizacion.saldo_suficiente ? 'alerta-info' : 'alerta-error'}`}>
+              Costo estimado: <strong>${cotizacion.costo.toFixed(2)}</strong>
+              {!cotizacion.saldo_suficiente && ' — Saldo insuficiente'}
+            </div>
+          )}
+          <button type="submit" className="btn btn-primario btn-ancho"
+            disabled={iniciando || (cotizacion !== null && !cotizacion.saldo_suficiente)}>
+            {iniciando ? 'Iniciando...' : '▶ Iniciar estacionamiento'}
+          </button>
+        </form>
+      </div>
 
       {error && <div className="alerta alerta-error" style={{ marginBottom: '1rem' }}>{error}</div>}
+      {resultado && <div className="alerta alerta-exito" style={{ marginBottom: '1rem' }}>{resultado}</div>}
 
       {sesiones.length === 0 ? (
         <div className="estado-vacio">
@@ -66,27 +165,24 @@ export default function ModuloEstacionamiento() {
       ) : (
         <div className="lista">
           {sesiones.map(s => (
-            <div key={s.id} className="card" style={{ borderLeft: '3px solid var(--azul)' }}>
+            <div key={s.id} className="card" style={{ borderLeft: '3px solid #1e2d6b' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '0.875rem' }}>
                 <div>
                   <span className="lista-item-titulo">{s.patente}</span>
-                  <div style={{ fontSize: '0.8rem', color: 'var(--gris-500)', marginTop: '0.2rem' }}>
-                    Zona: {s.idZona}
+                  <div style={{ fontSize: '0.8rem', color: '#94a3b8', marginTop: '0.2rem' }}>
+                    {s.zona.nombre} — ${s.zona.precio_hora}/hr
                   </div>
                 </div>
-                <span className="badge badge-azul" style={{ background: 'var(--azul-claro)', color: 'var(--azul)' }}>Activo</span>
+                <span className="badge badge-azul">Activo</span>
               </div>
-
-              <div style={{ textAlign: 'center', padding: '0.75rem 0', borderTop: '1px solid var(--gris-100)', borderBottom: '1px solid var(--gris-100)', marginBottom: '0.875rem' }}>
-                <div style={{ fontSize: '0.72rem', color: 'var(--gris-500)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '0.3rem' }}>Tiempo transcurrido</div>
-                <TiempoTranscurrido desde={s.horaInicio} />
+              <div style={{ textAlign: 'center', padding: '0.75rem 0', borderTop: '1px solid #f1f5f9', borderBottom: '1px solid #f1f5f9', marginBottom: '0.875rem' }}>
+                <div style={{ fontSize: '0.72rem', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '0.3rem' }}>
+                  Tiempo transcurrido
+                </div>
+                <TiempoTranscurrido desde={s.fecha_inicio} />
               </div>
-
-              <button
-                className="btn btn-peligro btn-ancho"
-                onClick={() => finalizar(s.id)}
-                disabled={finalizando === s.id}
-              >
+              <button className="btn btn-peligro btn-ancho"
+                onClick={() => finalizar(s.id)} disabled={finalizando === s.id}>
                 {finalizando === s.id ? 'Finalizando...' : 'Finalizar Estacionamiento'}
               </button>
             </div>

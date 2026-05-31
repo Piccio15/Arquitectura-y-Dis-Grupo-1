@@ -1,26 +1,54 @@
-import { apiClient } from './api-client';
 import type { Zona, ZonaFormData } from '../types/zona-interface';
 
-export const ZonaService = {
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
+
+const headers = (token?: string | null) => ({
+  'Content-Type': 'application/json',
+  ...(token ? { Authorization: `Bearer ${token}` } : {})
+});
+
+export const crearZonaService = (token: string | null) => ({
   obtenerZonas: async (): Promise<Zona[]> => {
-    return await apiClient<Zona[]>('/zonas', { method: 'GET' });
+    const res = await fetch(`${API_URL}/zonas`, { headers: headers(token) });
+    if (!res.ok) throw new Error('Error al obtener zonas');
+    return res.json();
   },
 
   crearZona: async (data: ZonaFormData): Promise<Zona> => {
-    return await apiClient<Zona>('/zonas', {
+    const res = await fetch(`${API_URL}/zonas`, {
       method: 'POST',
-      body: JSON.stringify(data)
+      headers: headers(token),
+      body: JSON.stringify(data),
     });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.error || 'Error al crear zona');
+    }
+    const json = await res.json();
+    return json.zona ?? json;
   },
 
-  actualizarZona: async (id: string, data: ZonaFormData): Promise<Zona> => {
-    return await apiClient<Zona>(`/zonas/${id}`, {
-      method: 'PUT',
-      body: JSON.stringify(data)
+  eliminarZona: async (id: number): Promise<void> => {
+    const res = await fetch(`${API_URL}/zonas/${id}`, {
+      method: 'DELETE',
+      headers: headers(token),
     });
+    if (!res.ok) throw new Error('Error al eliminar zona');
   },
-
-  eliminarZona: async (id: string): Promise<void> => {
-    return await apiClient<void>(`/zonas/${id}`, { method: 'DELETE' });
+  editarZona: async (id: number, data: ZonaFormData): Promise<Zona> => {
+  const res = await fetch(`${API_URL}/zonas/${id}`, {
+    method: 'PUT',
+    headers: headers(token),
+    body: JSON.stringify(data),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.error || 'Error al editar zona');
   }
-};
+  const json = await res.json();
+  return json.zona ?? json;
+},
+});
+
+// Compatibilidad con ModuloZonas que usa ZonaService directamente
+export const ZonaService = crearZonaService(null);

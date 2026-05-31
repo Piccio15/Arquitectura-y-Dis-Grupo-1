@@ -97,6 +97,7 @@ model zona {
   id                    Int                     @id @default(autoincrement())
   nombre                String
   calles                String
+  coordenadas           Json                    @default("[]")
   precio_hora           Float
   sesionestacionamiento sesionestacionamiento[]
 }

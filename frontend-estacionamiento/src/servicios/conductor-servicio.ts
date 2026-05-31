@@ -1,66 +1,99 @@
-import type { Vehiculo, SesionActiva, Multa, PerfilConductor } from '../types/conductor-interface';
-import { apiClient } from './api-client';
+import type { Vehiculo, SesionActiva, Multa, PerfilConductor, PreferenciaPago } from '../types/conductor-interface';
 
-interface PreferenciaPago {
-  operacionId: number;
-  preferenceId: string;
-  checkoutUrl: string;
-  sandboxCheckoutUrl?: string;
-}
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
+
+const headers = (token: string | null) => ({
+  'Content-Type': 'application/json',
+  ...(token ? { Authorization: `Bearer ${token}` } : {})
+});
+
+const manejarRespuesta = async <T>(res: Response): Promise<T> => {
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.error || `Error ${res.status}`);
+  }
+  return res.json();
+};
 
 export const crearConductorService = (token: string | null) => ({
-  obtenerSaldo: async (): Promise<{ saldo: number }> => {
-    return await apiClient<{ saldo: number }>('/finanzas/saldo', { method: 'GET' }, token);
-  },
 
-  obtenerPerfil: async (): Promise<PerfilConductor> => {
-    return await apiClient<PerfilConductor>('/conductor/perfil', { method: 'GET' }, token);
+  obtenerSaldo: async (): Promise<PerfilConductor> => {
+    const res = await fetch(`${API_URL}/finanzas/saldo`, { headers: headers(token) });
+    return manejarRespuesta<PerfilConductor>(res);
   },
 
   obtenerVehiculos: async (): Promise<Vehiculo[]> => {
-    return await apiClient<Vehiculo[]>('/conductor/vehiculos', { method: 'GET' }, token);
+    const res = await fetch(`${API_URL}/vehiculos`, { headers: headers(token) });
+    return manejarRespuesta<Vehiculo[]>(res);
   },
 
   registrarVehiculo: async (patente: string): Promise<void> => {
-    await apiClient('/conductor/vehiculos', {
+    const res = await fetch(`${API_URL}/vehiculos`, {
       method: 'POST',
-      body: JSON.stringify({ patente })
-    }, token);
+      headers: headers(token),
+      body: JSON.stringify({ patente }),
+    });
+    return manejarRespuesta<void>(res);
+  },
+
+  eliminarVehiculo: async (patente: string): Promise<void> => {
+    const res = await fetch(`${API_URL}/vehiculos/${patente}`, {
+      method: 'DELETE',
+      headers: headers(token),
+    });
+    return manejarRespuesta<void>(res);
   },
 
   obtenerSesiones: async (): Promise<SesionActiva[]> => {
-    return await apiClient<SesionActiva[]>('/estacionamientos/activas', { method: 'GET' }, token);
+    const res = await fetch(`${API_URL}/estacionamientos/activas`, { headers: headers(token) });
+    return manejarRespuesta<SesionActiva[]>(res);
   },
 
-  iniciarSesion: async (
-    patente: string,
-    zonaId: number,
-    duracionEstimadaMinutos: number
-  ): Promise<void> => {
-    await apiClient('/estacionamientos/iniciar', {
+  cotizarSesion: async (patente: string, zonaId: number, duracionEstimadaMinutos: number) => {
+    const res = await fetch(`${API_URL}/estacionamientos/cotizar`, {
       method: 'POST',
-      body: JSON.stringify({ patente, zonaId, duracionEstimadaMinutos })
-    }, token);
+      headers: headers(token),
+      body: JSON.stringify({ patente, zonaId, duracionEstimadaMinutos }),
+    });
+    return manejarRespuesta<{ costo: number; saldo_actual: number; saldo_suficiente: boolean }>(res);
   },
 
-  finalizarSesion: async (idSesion: string): Promise<void> => {
-    await apiClient(`/estacionamientos/${idSesion}/finalizar`, { method: 'PUT' }, token);
-  },
-
-  cargarSaldo: async (monto: number): Promise<PreferenciaPago> => {
-    return await apiClient<PreferenciaPago>('/finanzas/cargas', {
+  iniciarSesion: async (patente: string, zonaId: number, duracionEstimadaMinutos: number): Promise<SesionActiva> => {
+    const res = await fetch(`${API_URL}/estacionamientos/iniciar`, {
       method: 'POST',
-      body: JSON.stringify({ monto })
-    }, token);
+      headers: headers(token),
+      body: JSON.stringify({ patente, zonaId, duracionEstimadaMinutos }),
+    });
+    return manejarRespuesta<SesionActiva>(res);
+  },
+
+  finalizarSesion: async (id: number): Promise<{ duracion_real_minutos: number }> => {
+    const res = await fetch(`${API_URL}/estacionamientos/${id}/finalizar`, {
+      method: 'PUT',
+      headers: headers(token),
+    });
+    return manejarRespuesta<{ duracion_real_minutos: number }>(res);
   },
 
   obtenerMultas: async (): Promise<Multa[]> => {
-    return await apiClient<Multa[]>('/finanzas/multas', { method: 'GET' }, token);
+    const res = await fetch(`${API_URL}/finanzas/multas`, { headers: headers(token) });
+    return manejarRespuesta<Multa[]>(res);
   },
 
-  pagarMulta: async (idMulta: string): Promise<PreferenciaPago> => {
-    return await apiClient<PreferenciaPago>(`/finanzas/multas/${idMulta}/pagar`, {
-      method: 'POST'
-    }, token);
-  }
+  pagarMulta: async (id: number): Promise<PreferenciaPago> => {
+    const res = await fetch(`${API_URL}/finanzas/multas/${id}/pagar`, {
+      method: 'POST',
+      headers: headers(token),
+    });
+    return manejarRespuesta<PreferenciaPago>(res);
+  },
+
+  cargarSaldo: async (monto: number): Promise<PreferenciaPago> => {
+    const res = await fetch(`${API_URL}/finanzas/cargas`, {
+      method: 'POST',
+      headers: headers(token),
+      body: JSON.stringify({ monto }),
+    });
+    return manejarRespuesta<PreferenciaPago>(res);
+  },
 });

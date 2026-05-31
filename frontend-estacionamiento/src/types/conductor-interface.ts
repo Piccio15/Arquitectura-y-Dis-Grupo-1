@@ -1,25 +1,34 @@
-// src/types/conductor-interface.ts
-
 export interface Vehiculo {
   patente: string;
+  conductorId: number;
 }
 
 export interface SesionActiva {
-  id: string;
+  id: number;
   patente: string;
-  idZona: string;
-  horaInicio: string; // ISO String
+  zonaId: number;
+  fecha_inicio: string;
+  duracion_estimada_minutos: number;
+  costo_cobrado: number;
+  zona: { id: number; nombre: string; precio_hora: number; };
 }
 
 export interface Multa {
-  id: string;
+  id_multa: number;
   patente: string;
-  motivo: string;
+  ubicacion: string;
   monto: number;
-  estado: 'PENDIENTE' | 'PAGADA';
+  estado: 'PENDIENTE' | 'PAGADA' | 'ANULADA';
+  fecha: string;
 }
 
 export interface PerfilConductor {
-  id: string;
   saldo: number;
+}
+
+export interface PreferenciaPago {
+  operacionId: number;
+  preferenceId: string;
+  checkoutUrl: string;
+  sandboxCheckoutUrl?: string;
 }

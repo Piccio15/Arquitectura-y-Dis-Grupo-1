@@ -1,105 +1,112 @@
-import { useState, useEffect } from 'react';
-import { MapContainer, TileLayer, Polygon, Marker, useMapEvents } from 'react-leaflet';
+import { useEffect, useRef } from 'react';
 import L from 'leaflet';
-import 'leaflet/dist/leaflet.css'; // Obligatorio para el correcto renderizado de los mosaicos
+import 'leaflet/dist/leaflet.css';
 import type { Coordenada } from '../../types/zona-interface';
-
-// Configuración necesaria en React-Leaflet para que los iconos de los marcadores por defecto funcionen
-import icon from 'leaflet/dist/images/marker-icon.png';
-import iconShadow from 'leaflet/dist/images/marker-shadow.png';
-
-const DefaultIcon = L.icon({
-  iconUrl: icon,
-  shadowUrl: iconShadow,
-  iconAnchor: [12, 41]
-});
-L.Marker.prototype.options.icon = DefaultIcon;
 
 interface MapAdapterProps {
   coordenadasIniciales: Coordenada[];
   soloLectura: boolean;
   onCoordenadasChange?: (coordenadas: Coordenada[]) => void;
+  maxPuntos?: number;
 }
 
-// Subcomponente de React-Leaflet para interceptar eventos del DOM del mapa
-function ManejadorEventosMapa({ onClick, soloLectura }: { onClick: (c: Coordenada) => void, soloLectura: boolean }) {
-  useMapEvents({
-    click(e) {
-      if (!soloLectura) {
-        onClick({ lat: e.latlng.lat, lng: e.latlng.lng });
-      }
-    },
-  });
-  return null;
-}
+const iconoUbicacion = L.divIcon({
+  html: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="32" height="32">
+    <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z" fill="#1e2d6b"/>
+    <circle cx="12" cy="9" r="2.5" fill="white"/>
+  </svg>`,
+  className: '',
+  iconSize: [32, 32],
+  iconAnchor: [16, 32],
+});
 
-export function MapAdapter({ coordenadasIniciales, soloLectura, onCoordenadasChange }: MapAdapterProps) {
-  const [puntos, setPuntos] = useState<Coordenada[]>(coordenadasIniciales);
+export function MapAdapter({ coordenadasIniciales, soloLectura, onCoordenadasChange, maxPuntos = 4 }: MapAdapterProps) {
+  const contenedorRef = useRef<HTMLDivElement>(null);
+  const mapaRef = useRef<L.Map | null>(null);
+  const puntosRef = useRef<Coordenada[]>([...coordenadasIniciales]);
+  const marcadoresRef = useRef<L.Marker[]>([]);
+  const poligonoRef = useRef<L.Polygon | null>(null);
+  const contadorRef = useRef<HTMLSpanElement | null>(null);
 
   useEffect(() => {
-    setPuntos(coordenadasIniciales);
-  }, [coordenadasIniciales]);
+    if (!contenedorRef.current || mapaRef.current) return;
 
-  const manejarClickMapa = (nuevaCoordenada: Coordenada) => {
-    const nuevosPuntos = [...puntos, nuevaCoordenada];
-    setPuntos(nuevosPuntos);
-    if (onCoordenadasChange) {
-      onCoordenadasChange(nuevosPuntos);
+    const mapa = L.map(contenedorRef.current).setView([-38.7196, -62.2663], 14);
+    mapaRef.current = mapa;
+
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '&copy; OpenStreetMap contributors'
+    }).addTo(mapa);
+
+    if (!soloLectura) {
+      mapa.on('click', (e: L.LeafletMouseEvent) => {
+        if (puntosRef.current.length >= maxPuntos) return;
+        const nuevaCoordenada = { lat: e.latlng.lat, lng: e.latlng.lng };
+        puntosRef.current = [...puntosRef.current, nuevaCoordenada];
+        actualizarMapa();
+        if (onCoordenadasChange) onCoordenadasChange(puntosRef.current);
+        if (contadorRef.current) {
+          contadorRef.current.textContent = `${puntosRef.current.length} / ${maxPuntos} puntos`;
+        }
+      });
+    }
+
+    return () => {
+      mapa.remove();
+      mapaRef.current = null;
+    };
+  }, []);
+
+  const actualizarMapa = () => {
+    const mapa = mapaRef.current;
+    if (!mapa) return;
+
+    marcadoresRef.current.forEach(m => m.remove());
+    marcadoresRef.current = [];
+
+    if (poligonoRef.current) {
+      poligonoRef.current.remove();
+      poligonoRef.current = null;
+    }
+
+    puntosRef.current.forEach(p => {
+      const marcador = L.marker([p.lat, p.lng], { icon: iconoUbicacion }).addTo(mapa);
+      marcadoresRef.current.push(marcador);
+    });
+
+    if (puntosRef.current.length >= 3) {
+      poligonoRef.current = L.polygon(
+        puntosRef.current.map(p => [p.lat, p.lng] as [number, number]),
+        { color: '#2980b9', fillColor: '#3498db', fillOpacity: 0.4 }
+      ).addTo(mapa);
     }
   };
 
-  const limpiarPoligono = () => {
-    setPuntos([]);
+  const limpiar = () => {
+    puntosRef.current = [];
+    actualizarMapa();
     if (onCoordenadasChange) onCoordenadasChange([]);
+    if (contadorRef.current) {
+      contadorRef.current.textContent = `0 / ${maxPuntos} puntos`;
+    }
   };
 
-  // Coordenadas centrales por defecto (Bahía Blanca)
-  const centroPorDefecto: [number, number] = [-38.7196, -62.2663];
-  
-  // Transformación de la estructura de datos interna al formato requerido por Leaflet
-  const posicionesPoligono = puntos.map(p => [p.lat, p.lng] as [number, number]);
-
   return (
-    <div style={{ border: '1px solid #bdc3c7', borderRadius: '4px', overflow: 'hidden' }}>
+    <div style={{ border: '1px solid #bdc3c7', borderRadius: '4px' }}>
       <div style={{ padding: '0.5rem', backgroundColor: '#ecf0f1', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <span style={{ fontSize: '0.85rem', color: '#7f8c8d' }}>
-          {soloLectura 
-            ? 'Modo Visualización' 
-            : 'Modo Edición: Haga clic en el mapa para marcar los vértices'}
+          {soloLectura
+            ? 'Modo Visualización'
+            : <><span ref={contadorRef}>0 / {maxPuntos} puntos</span> — hacé clic para marcar</>
+          }
         </span>
         {!soloLectura && (
-          <button type="button" onClick={limpiarPoligono} style={{ fontSize: '0.8rem', padding: '0.3rem 0.6rem', cursor: 'pointer' }}>
+          <button type="button" onClick={limpiar} style={{ fontSize: '0.8rem', padding: '0.3rem 0.6rem', cursor: 'pointer' }}>
             Limpiar Área
           </button>
         )}
       </div>
-      
-      {/* Contenedor principal de Leaflet */}
-      <MapContainer 
-        center={centroPorDefecto} 
-        zoom={14} 
-        style={{ height: '350px', width: '100%', zIndex: 0 }}
-      >
-        <TileLayer
-          attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-          url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-        />
-        
-        <ManejadorEventosMapa onClick={manejarClickMapa} soloLectura={soloLectura} />
-        
-        {/* Renderizado de vértices individuales */}
-        {puntos.map((punto, index) => (
-          <Marker key={index} position={[punto.lat, punto.lng]} />
-        ))}
-        
-        {/* Renderizado del polígono cerrado (Requiere mínimo 3 puntos estructuralmente) */}
-        {puntos.length >= 3 && (
-          <Polygon 
-            positions={posicionesPoligono} 
-            pathOptions={{ color: '#2980b9', fillColor: '#3498db', fillOpacity: 0.4 }} 
-          />
-        )}
-      </MapContainer>
+      <div ref={contenedorRef} style={{ height: '350px', width: '100%' }} />
     </div>
   );
 }
