@@ -84,6 +84,18 @@ export const FinanzasController = {
   recibirWebhookMercadoPago: async (req: Request, res: Response) => {
     const tipo = obtenerQueryString(req.query.type) ?? req.body?.type;
     const dataId = obtenerQueryString(req.query['data.id']) ?? req.body?.data?.id;
+    const topicoIpn = obtenerQueryString(req.query.topic);
+    const idIpn = obtenerQueryString(req.query.id);
+
+    if (topicoIpn === 'payment' && idIpn) {
+      try {
+        const operacion = await BilleteraService.procesarPagoNotificado(idIpn);
+        res.json({ recibido: true, procesado: true, operacion });
+      } catch (error) {
+        responderError(res, error);
+      }
+      return;
+    }
 
     if (tipo !== 'payment' || typeof dataId !== 'string') {
       res.status(200).json({ recibido: true, procesado: false });

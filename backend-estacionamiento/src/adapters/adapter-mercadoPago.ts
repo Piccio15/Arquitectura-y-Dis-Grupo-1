@@ -42,6 +42,7 @@ export const MercadoPagoAdapter = {
   }) => {
     const notificationUrl = process.env.MP_WEBHOOK_URL;
     const backUrl = process.env.MP_BACK_URL;
+    const usarRetornoAutomatico = backUrl?.startsWith('https://');
 
     return await solicitar<{
       id: string;
@@ -60,7 +61,7 @@ export const MercadoPagoAdapter = {
           }
         ],
         ...(notificationUrl && { notification_url: notificationUrl }),
-        ...(backUrl && {
+        ...(usarRetornoAutomatico && {
           back_urls: {
             success: backUrl,
             pending: backUrl,

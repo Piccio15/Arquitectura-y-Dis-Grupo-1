@@ -9,6 +9,10 @@ interface PreferenciaPago {
 }
 
 export const crearConductorService = (token: string | null) => ({
+  obtenerSaldo: async (): Promise<{ saldo: number }> => {
+    return await apiClient<{ saldo: number }>('/finanzas/saldo', { method: 'GET' }, token);
+  },
+
   obtenerPerfil: async (): Promise<PerfilConductor> => {
     return await apiClient<PerfilConductor>('/conductor/perfil', { method: 'GET' }, token);
   },
