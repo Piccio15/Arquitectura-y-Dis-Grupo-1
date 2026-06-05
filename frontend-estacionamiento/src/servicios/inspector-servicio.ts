@@ -1,25 +1,40 @@
-import { apiClient } from './api-client';
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
 
 export interface EstadoVerificacionDTO {
   patente: string;
   tieneSesionActiva: boolean;
-  zonaId?: string;
+  zonaId?: number;
   nombreZona?: string;
   horaInicio?: string;
-  saldoRestante?: number;
 }
+
+const headers = (token: string | null) => ({
+  'Content-Type': 'application/json',
+  ...(token ? { Authorization: `Bearer ${token}` } : {})
+});
+
+const manejarRespuesta = async <T>(res: Response): Promise<T> => {
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.error || `Error ${res.status}`);
+  }
+  return res.json();
+};
 
 export const crearInspectorService = (token: string | null) => ({
   verificarPatente: async (patente: string): Promise<EstadoVerificacionDTO> => {
-    return await apiClient<EstadoVerificacionDTO>(`/inspeccion/verificar/${patente}`, {
-      method: 'GET'
-    }, token);
+    const res = await fetch(`${API_URL}/inspectores/verificar/${patente.trim().toUpperCase()}`, {
+      headers: headers(token)
+    });
+    return manejarRespuesta<EstadoVerificacionDTO>(res);
   },
 
   emitirMulta: async (patente: string, motivo: string, monto: number): Promise<void> => {
-    await apiClient('/inspeccion/multar', {
+    const res = await fetch(`${API_URL}/inspectores/multas`, {
       method: 'POST',
-      body: JSON.stringify({ patente, motivo, monto })
-    }, token);
+      headers: headers(token),
+      body: JSON.stringify({ patente, motivo, monto, ubicacion: 'Sin ubicación especificada' })
+    });
+    return manejarRespuesta<void>(res);
   }
 });

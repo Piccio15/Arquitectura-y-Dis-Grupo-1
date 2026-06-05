@@ -55,5 +55,42 @@ export const UsuarioRepository = {
       where: { usuarioId },
       data: { saldo: nuevoSaldo }
     });
+  },
+  
+  buscarInspectorPorClerkId: async (clerkId: string) => {
+    const usuario = await orm.usuario.findUnique({
+      where: { clerk_id: clerkId },
+      include: { inspector: true }
+    });
+    return usuario?.inspector ?? null;
+  },
+
+  buscarSesionActivaPorPatente: async (patente: string) => {
+    return await orm.sesionestacionamiento.findFirst({
+      where: { patente: patente.toUpperCase(), fecha_fin: null },
+      include: { zona: true }
+    });
+  },
+
+  buscarVehiculoPorPatente: async (patente: string) => {
+    return await orm.vehiculo.findUnique({
+      where: { patente: patente.toUpperCase() }
+    });
+  },
+
+  crearMulta: async (datos: {
+    patente: string;
+    ubicacion: string;
+    monto: number;
+    inspectorId: number;
+  }) => {
+    return await orm.multa.create({
+      data: {
+        patente: datos.patente,
+        ubicacion: datos.ubicacion,
+        monto: datos.monto,
+        inspectorId: datos.inspectorId,
+      }
+    });
   }
 };
