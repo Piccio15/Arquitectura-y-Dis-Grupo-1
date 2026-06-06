@@ -61,7 +61,7 @@ async function finalizarSesionConCobro(
   const costoCobrado = calcularCosto(sesion.zona.precio_hora, duracionRealMinutos);
 
   await BilleteraService.debitarSaldo(
-    sesion.vehiculo.conductorId,
+    sesion.conductorId,
     costoCobrado,
     tx
   );
@@ -134,7 +134,8 @@ export const EstacionamientoService = {
 
       return await EstacionamientoRepository.crearSesion({
         patente,
-        zonaId: zona.id
+        zonaId: zona.id,
+        conductorId: conductor.id
       }, tx);
     }, {
       isolationLevel: Prisma.TransactionIsolationLevel.Serializable

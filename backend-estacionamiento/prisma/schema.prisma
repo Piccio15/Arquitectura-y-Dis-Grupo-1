@@ -12,7 +12,8 @@ model conductor {
   saldo         Float           @default(0)
   usuarioId     Int             @unique(map: "Conductor_usuarioId_key")
   usuario       usuario         @relation(fields: [usuarioId], references: [id], map: "Conductor_usuarioId_fkey")
-  vehiculo      vehiculo[]
+  vehiculo      conductorvehiculo[]
+  sesionestacionamiento sesionestacionamiento[]
   operacionpago operacionpago[]
 }
 
@@ -72,9 +73,12 @@ model sesionestacionamiento {
   costo_cobrado             Float?
   patente                   String
   zonaId                    Int
+  conductorId               Int
   vehiculo                  vehiculo  @relation(fields: [patente], references: [patente], map: "SesionEstacionamiento_patente_fkey")
   zona                      zona      @relation(fields: [zonaId], references: [id], map: "SesionEstacionamiento_zonaId_fkey")
+  conductor                 conductor @relation(fields: [conductorId], references: [id], map: "SesionEstacionamiento_conductorId_fkey")
 
+  @@index([conductorId], map: "SesionEstacionamiento_conductorId_fkey")
   @@index([patente], map: "SesionEstacionamiento_patente_fkey")
   @@index([zonaId], map: "SesionEstacionamiento_zonaId_fkey")
 }
@@ -91,12 +95,20 @@ model usuario {
 
 model vehiculo {
   patente               String                  @id
-  conductorId           Int
   multa                 multa[]
   sesionestacionamiento sesionestacionamiento[]
-  conductor             conductor               @relation(fields: [conductorId], references: [id], map: "Vehiculo_conductorId_fkey")
+  conductores           conductorvehiculo[]
+}
 
-  @@index([conductorId], map: "Vehiculo_conductorId_fkey")
+model conductorvehiculo {
+  conductorId Int
+  patente     String
+  fecha_asociacion DateTime @default(now())
+  conductor   conductor @relation(fields: [conductorId], references: [id], map: "ConductorVehiculo_conductorId_fkey")
+  vehiculo    vehiculo  @relation(fields: [patente], references: [patente], map: "ConductorVehiculo_patente_fkey")
+
+  @@id([conductorId, patente])
+  @@index([patente], map: "ConductorVehiculo_patente_fkey")
 }
 
 model zona {

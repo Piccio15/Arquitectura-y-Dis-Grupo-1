@@ -1,6 +1,10 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '@clerk/clerk-react';
 import { crearConductorService } from '../../servicios/conductor-servicio';
+import {
+  crearConfiguracionService,
+  type HorarioCobro
+} from '../../servicios/configuracion-servicio';
 import type { SesionActiva, Vehiculo } from '../../types/conductor-interface';
 
 function TiempoTranscurrido({ desde }: { desde: string }) {
@@ -26,6 +30,7 @@ export default function ModuloEstacionamiento() {
   const [error, setError] = useState<string | null>(null);
   const [resultado, setResultado] = useState<string | null>(null);
   const [finalizando, setFinalizando] = useState<number | null>(null);
+  const [horarioCobro, setHorarioCobro] = useState<HorarioCobro | null>(null);
 
   // Form iniciar
   const [patenteSeleccionada, setPatenteSeleccionada] = useState('');
@@ -37,12 +42,15 @@ export default function ModuloEstacionamiento() {
       setCargando(true);
       const token = await getToken();
       const svc = crearConductorService(token);
-      const [sesionesData, vehiculosData] = await Promise.all([
+      const configuracionSvc = crearConfiguracionService(token);
+      const [sesionesData, vehiculosData, horarioData] = await Promise.all([
         svc.obtenerSesiones(),
         svc.obtenerVehiculos(),
+        configuracionSvc.obtenerHorarioCobro(),
       ]);
       setSesiones(sesionesData || []);
       setVehiculos(vehiculosData || []);
+      setHorarioCobro(horarioData);
     } catch (err: any) { setError(err.message); }
     finally { setCargando(false); }
   };
@@ -96,6 +104,13 @@ export default function ModuloEstacionamiento() {
     <div>
       <h2 className="seccion-titulo">Estacionamiento</h2>
 
+      {horarioCobro && (
+        <div className={`alerta ${horarioCobro.cobro_activo ? 'alerta-exito' : 'alerta-info'}`} style={{ marginBottom: '1rem' }}>
+          Horario de cobro: <strong>{horarioCobro.hora_inicio_cobro} a {horarioCobro.hora_fin_cobro}</strong>.
+          {' '}Estado actual: <strong>{horarioCobro.cobro_activo ? 'cobro activo' : 'fuera de horario'}</strong>.
+        </div>
+      )}
+
       {/* Formulario iniciar */}
       <div className="card" style={{ marginBottom: '1rem' }}>
         <h3 style={{ marginBottom: '0.75rem', fontSize: '0.85rem', fontWeight: 700, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
@@ -117,10 +132,10 @@ export default function ModuloEstacionamiento() {
             </select>
           </div>
           <div className="alerta alerta-info">
-            Necesitas saldo positivo para iniciar.
+            Necesitas saldo positivo y estar dentro del horario de cobro para iniciar.
           </div>
           <button type="submit" className="btn btn-primario btn-ancho"
-            disabled={iniciando}>
+            disabled={iniciando || horarioCobro?.cobro_activo === false}>
             {iniciando ? 'Iniciando...' : '▶ Iniciar estacionamiento'}
           </button>
         </form>

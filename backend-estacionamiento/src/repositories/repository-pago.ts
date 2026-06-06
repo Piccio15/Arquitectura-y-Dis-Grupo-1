@@ -24,7 +24,11 @@ export const PagoRepository = {
       where: {
         id_multa: multaId,
         estado: 'PENDIENTE',
-        vehiculo: { conductorId }
+        vehiculo: {
+          conductores: {
+            some: { conductorId }
+          }
+        }
       }
     });
   },
@@ -97,8 +101,12 @@ export const PagoRepository = {
     return await orm.multa.findMany({
       where: {
         vehiculo: {
-          conductor: {
-            usuario: { clerk_id: clerkId }
+          conductores: {
+            some: {
+              conductor: {
+                usuario: { clerk_id: clerkId }
+              }
+            }
           }
         }
       },

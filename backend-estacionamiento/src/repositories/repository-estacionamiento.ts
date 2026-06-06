@@ -3,7 +3,7 @@ import { orm } from './orm-config';
 
 type DatabaseClient = Pick<
   Prisma.TransactionClient,
-  'conductor' | 'sesionestacionamiento' | 'vehiculo' | 'zona'
+  'conductor' | 'conductorvehiculo' | 'sesionestacionamiento' | 'vehiculo' | 'zona'
 >;
 
 export const EstacionamientoRepository = {
@@ -20,8 +20,11 @@ export const EstacionamientoRepository = {
     conductorId: number,
     db: DatabaseClient = orm
   ) => {
-    return await db.vehiculo.findFirst({
-      where: { patente, conductorId }
+    return await db.conductorvehiculo.findUnique({
+      where: {
+        conductorId_patente: { conductorId, patente }
+      },
+      include: { vehiculo: true }
     });
   },
 
@@ -44,13 +47,15 @@ export const EstacionamientoRepository = {
     datos: {
       patente: string;
       zonaId: number;
+      conductorId: number;
     },
     db: DatabaseClient = orm
   ) => {
     return await db.sesionestacionamiento.create({
       data: {
         patente: datos.patente,
-        zonaId: datos.zonaId
+        zonaId: datos.zonaId,
+        conductorId: datos.conductorId
       },
       include: { zona: true }
     });
@@ -60,10 +65,8 @@ export const EstacionamientoRepository = {
     return await orm.sesionestacionamiento.findMany({
       where: {
         fecha_fin: null,
-        vehiculo: {
-          conductor: {
-            usuario: { clerk_id: clerkId }
-          }
+        conductor: {
+          usuario: { clerk_id: clerkId }
         }
       },
       include: { zona: true },
@@ -88,10 +91,8 @@ export const EstacionamientoRepository = {
       where: {
         id: sesionId,
         fecha_fin: null,
-        vehiculo: {
-          conductor: {
-            usuario: { clerk_id: clerkId }
-          }
+        conductor: {
+          usuario: { clerk_id: clerkId }
         }
       },
       include: { zona: true, vehiculo: true }

@@ -33,6 +33,6 @@ export const VehiculoService = {
     const vehiculo = await VehiculoRepository.buscarVehiculoDelConductor(patente.toUpperCase(), conductor.id);
     if (!vehiculo) throw new ErrorVehiculo('Vehículo no encontrado', 404);
 
-    return await VehiculoRepository.eliminarVehiculo(patente.toUpperCase());
+    return await VehiculoRepository.eliminarVehiculoDelConductor(patente.toUpperCase(), conductor.id);
   }
 };

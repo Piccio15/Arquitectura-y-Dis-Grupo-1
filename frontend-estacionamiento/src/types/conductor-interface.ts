@@ -1,6 +1,5 @@
 export interface Vehiculo {
   patente: string;
-  conductorId: number;
 }
 
 export interface SesionActiva {
