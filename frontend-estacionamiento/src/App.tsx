@@ -13,6 +13,7 @@ import MenuInspector from './componentes/inspector/MenuInspector';
 
 import ModuloZonas from './componentes/admin/ModuloZonas';
 import ModuloInspectores from './componentes/admin/ModuloInspectores';
+import ModuloHorarioCobro from './componentes/admin/ModuloHorarioCobro';
 import ModuloVehiculos from './componentes/conductor/ModuloVehiculos';
 import ModuloEstacionamiento from './componentes/conductor/ModuloEstacionamiento';
 import { ModuloSaldo } from './componentes/conductor/ModuloSaldo';
@@ -111,6 +112,7 @@ export default function App() {
         <Route path="/admin" element={<RutaProtegida rolRequerido="ADMINISTRADOR"><DashboardAdmin /></RutaProtegida>}>
           <Route index element={<MenuAdmin />} />
           <Route path="zonas" element={<ModuloZonas />} />
+          <Route path="horario-cobro" element={<ModuloHorarioCobro />} />
           <Route path="inspectores" element={<ModuloInspectores />} />
         </Route>
 

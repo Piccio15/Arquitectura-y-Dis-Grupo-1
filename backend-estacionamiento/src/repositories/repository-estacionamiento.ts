@@ -71,6 +71,14 @@ export const EstacionamientoRepository = {
     });
   },
 
+  listarSesionesActivas: async (db: DatabaseClient = orm) => {
+    return await db.sesionestacionamiento.findMany({
+      where: { fecha_fin: null },
+      include: { zona: true, vehiculo: true },
+      orderBy: { fecha_inicio: 'asc' }
+    });
+  },
+
   buscarSesionActivaDelConductor: async (
     sesionId: number,
     clerkId: string,
@@ -85,6 +93,16 @@ export const EstacionamientoRepository = {
             usuario: { clerk_id: clerkId }
           }
         }
+      },
+      include: { zona: true, vehiculo: true }
+    });
+  },
+
+  buscarSesionActivaPorId: async (sesionId: number, db: DatabaseClient = orm) => {
+    return await db.sesionestacionamiento.findFirst({
+      where: {
+        id: sesionId,
+        fecha_fin: null
       },
       include: { zona: true, vehiculo: true }
     });

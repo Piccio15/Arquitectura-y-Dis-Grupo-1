@@ -2,6 +2,11 @@ import { Prisma } from '@prisma/client';
 import { EstacionamientoRepository } from '../repositories/repository-estacionamiento';
 import { orm } from '../repositories/orm-config';
 import { BilleteraService } from './service-billetera';
+import {
+  ConfiguracionService,
+  correspondeCerrarPorFinDeHorario,
+  estaDentroDelHorarioCobro
+} from './service-configuracion';
 
 export class ErrorEstacionamiento extends Error {
   constructor(
@@ -41,6 +46,44 @@ function calcularCosto(precioHora: number, duracionMinutos: number) {
   return redondearImporte(precioHora * duracionMinutos / 60);
 }
 
+type SesionCobrable = NonNullable<
+  Awaited<ReturnType<typeof EstacionamientoRepository.buscarSesionActivaPorId>>
+>;
+
+async function finalizarSesionConCobro(
+  sesion: SesionCobrable,
+  tx: Prisma.TransactionClient
+) {
+  const fechaFin = new Date();
+  const duracionRealMinutos = Math.ceil(
+    (fechaFin.getTime() - sesion.fecha_inicio.getTime()) / 60000
+  );
+  const costoCobrado = calcularCosto(sesion.zona.precio_hora, duracionRealMinutos);
+
+  await BilleteraService.debitarSaldo(
+    sesion.vehiculo.conductorId,
+    costoCobrado,
+    tx
+  );
+
+  const sesionFinalizada = await EstacionamientoRepository.finalizarSesion(
+    sesion.id,
+    fechaFin,
+    costoCobrado,
+    tx
+  );
+
+  if (!sesionFinalizada) {
+    throw new ErrorEstacionamiento('La sesion ya fue finalizada', 409);
+  }
+
+  return {
+    ...sesionFinalizada,
+    duracion_real_minutos: duracionRealMinutos,
+    costo_cobrado: costoCobrado
+  };
+}
+
 export const EstacionamientoService = {
   iniciarSesion: async (
     clerkId: string,
@@ -50,6 +93,11 @@ export const EstacionamientoService = {
     }
   ) => {
     const patente = validarDatosInicio(datos);
+    const horario = await ConfiguracionService.obtenerHorarioCobro();
+
+    if (!estaDentroDelHorarioCobro(horario)) {
+      throw new ErrorEstacionamiento('No se puede iniciar estacionamiento fuera del horario de cobro', 422);
+    }
 
     return await orm.$transaction(async tx => {
       const conductor = await EstacionamientoRepository.buscarConductorPorClerkId(clerkId, tx);
@@ -113,36 +161,63 @@ export const EstacionamientoService = {
         throw new ErrorEstacionamiento('No se encontro una sesion activa del conductor', 404);
       }
 
-      const fechaFin = new Date();
-      const duracionRealMinutos = Math.ceil(
-        (fechaFin.getTime() - sesion.fecha_inicio.getTime()) / 60000
-      );
-      const costoCobrado = calcularCosto(sesion.zona.precio_hora, duracionRealMinutos);
-
-      await BilleteraService.debitarSaldo(
-        sesion.vehiculo.conductorId,
-        costoCobrado,
-        tx
-      );
-
-      const sesionFinalizada = await EstacionamientoRepository.finalizarSesion(
-        sesion.id,
-        fechaFin,
-        costoCobrado,
-        tx
-      );
-
-      if (!sesionFinalizada) {
-        throw new ErrorEstacionamiento('La sesion ya fue finalizada', 409);
-      }
-
-      return {
-        ...sesionFinalizada,
-        duracion_real_minutos: duracionRealMinutos,
-        costo_cobrado: costoCobrado
-      };
+      return await finalizarSesionConCobro(sesion, tx);
     }, {
       isolationLevel: Prisma.TransactionIsolationLevel.Serializable
     });
+  },
+
+  cerrarSesionesPorFinDeHorario: async () => {
+    const horario = await ConfiguracionService.obtenerHorarioCobro();
+
+    if (!correspondeCerrarPorFinDeHorario(horario)) {
+      return {
+        ejecutado: false,
+        sesiones_cerradas: 0,
+        errores: 0
+      };
+    }
+
+    const sesionesActivas = await EstacionamientoRepository.listarSesionesActivas();
+    let sesionesCerradas = 0;
+    let errores = 0;
+
+    for (const sesionActiva of sesionesActivas) {
+      try {
+        await orm.$transaction(async tx => {
+          const sesion = await EstacionamientoRepository.buscarSesionActivaPorId(
+            sesionActiva.id,
+            tx
+          );
+
+          if (!sesion) {
+            return;
+          }
+
+          await finalizarSesionConCobro(sesion, tx);
+          sesionesCerradas += 1;
+        }, {
+          isolationLevel: Prisma.TransactionIsolationLevel.Serializable
+        });
+      } catch (error) {
+        errores += 1;
+        console.error('Error al cerrar sesion por fin de horario:', error);
+      }
+    }
+
+    return {
+      ejecutado: true,
+      sesiones_cerradas: sesionesCerradas,
+      errores
+    };
+  },
+
+  obtenerEstadoHorarioCobro: async () => {
+    const horario = await ConfiguracionService.obtenerHorarioCobro();
+
+    return {
+      ...horario,
+      cobro_activo: estaDentroDelHorarioCobro(horario)
+    };
   }
 };

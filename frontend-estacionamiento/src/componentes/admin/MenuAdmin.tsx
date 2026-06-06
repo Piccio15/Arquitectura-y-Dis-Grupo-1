@@ -13,6 +13,7 @@ export default function MenuAdmin() {
 
   const modulos = [
     { ruta: 'zonas',       icono: '🗺️', color: 'azul',  titulo: 'Zonas de Estacionamiento', desc: 'Crear, editar y administrar áreas', accent: '#2563eb' },
+    { ruta: 'horario-cobro', icono: '⏰', color: 'azul', titulo: 'Horario de Cobro', desc: 'Definir inicio y fin del estacionamiento medido', accent: '#7c3aed' },
     { ruta: 'inspectores', icono: '👮', color: 'verde', titulo: 'Inspectores',               desc: 'Gestionar agentes de tránsito',    accent: '#16a34a' },
   ];
 

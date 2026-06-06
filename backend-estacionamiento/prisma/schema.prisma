@@ -16,6 +16,13 @@ model conductor {
   operacionpago operacionpago[]
 }
 
+model configuracionsistema {
+  id                Int      @id @default(1)
+  hora_inicio_cobro String   @default("08:00")
+  hora_fin_cobro    String   @default("20:00")
+  actualizada_en    DateTime @updatedAt
+}
+
 model inspector {
   id        Int     @id @default(autoincrement())
   legajo    String  @unique(map: "Inspector_legajo_key")
