@@ -49,30 +49,21 @@ export const crearConductorService = (token: string | null) => ({
     return manejarRespuesta<SesionActiva[]>(res);
   },
 
-  cotizarSesion: async (patente: string, zonaId: number, duracionEstimadaMinutos: number) => {
-    const res = await fetch(`${API_URL}/estacionamientos/cotizar`, {
-      method: 'POST',
-      headers: headers(token),
-      body: JSON.stringify({ patente, zonaId, duracionEstimadaMinutos }),
-    });
-    return manejarRespuesta<{ costo: number; saldo_actual: number; saldo_suficiente: boolean }>(res);
-  },
-
-  iniciarSesion: async (patente: string, zonaId: number, duracionEstimadaMinutos: number): Promise<SesionActiva> => {
+  iniciarSesion: async (patente: string, zonaId: number): Promise<SesionActiva> => {
     const res = await fetch(`${API_URL}/estacionamientos/iniciar`, {
       method: 'POST',
       headers: headers(token),
-      body: JSON.stringify({ patente, zonaId, duracionEstimadaMinutos }),
+      body: JSON.stringify({ patente, zonaId }),
     });
     return manejarRespuesta<SesionActiva>(res);
   },
 
-  finalizarSesion: async (id: number): Promise<{ duracion_real_minutos: number }> => {
+  finalizarSesion: async (id: number): Promise<{ duracion_real_minutos: number; costo_cobrado: number }> => {
     const res = await fetch(`${API_URL}/estacionamientos/${id}/finalizar`, {
       method: 'PUT',
       headers: headers(token),
     });
-    return manejarRespuesta<{ duracion_real_minutos: number }>(res);
+    return manejarRespuesta<{ duracion_real_minutos: number; costo_cobrado: number }>(res);
   },
 
   obtenerMultas: async (): Promise<Multa[]> => {

@@ -62,8 +62,7 @@ model sesionestacionamiento {
   id                        Int       @id @default(autoincrement())
   fecha_inicio              DateTime  @default(now())
   fecha_fin                 DateTime?
-  duracion_estimada_minutos Int
-  costo_cobrado             Float
+  costo_cobrado             Float?
   patente                   String
   zonaId                    Int
   vehiculo                  vehiculo  @relation(fields: [patente], references: [patente], map: "SesionEstacionamiento_patente_fkey")

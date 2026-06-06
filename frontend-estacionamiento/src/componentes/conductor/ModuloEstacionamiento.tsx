@@ -30,9 +30,7 @@ export default function ModuloEstacionamiento() {
   // Form iniciar
   const [patenteSeleccionada, setPatenteSeleccionada] = useState('');
   const [zonaSeleccionada, setZonaSeleccionada] = useState('');
-  const [duracion, setDuracion] = useState(60);
   const [iniciando, setIniciando] = useState(false);
-  const [cotizacion, setCotizacion] = useState<{ costo: number; saldo_suficiente: boolean } | null>(null);
 
   const cargarDatos = async () => {
     try {
@@ -61,22 +59,6 @@ export default function ModuloEstacionamiento() {
 
   useEffect(() => { cargarDatos(); cargarZonas(); }, []);
 
-  const cotizar = async () => {
-    if (!patenteSeleccionada || !zonaSeleccionada) return;
-    try {
-      const token = await getToken();
-      const result = await crearConductorService(token).cotizarSesion(
-        patenteSeleccionada, Number(zonaSeleccionada), duracion
-      );
-      setCotizacion(result);
-    } catch (err: any) { setError(err.message); }
-  };
-
-  useEffect(() => {
-    setCotizacion(null);
-    if (patenteSeleccionada && zonaSeleccionada && duracion > 0) cotizar();
-  }, [patenteSeleccionada, zonaSeleccionada, duracion]);
-
   const iniciar = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
@@ -85,12 +67,10 @@ export default function ModuloEstacionamiento() {
     try {
       const token = await getToken();
       await crearConductorService(token).iniciarSesion(
-        patenteSeleccionada, Number(zonaSeleccionada), duracion
+        patenteSeleccionada, Number(zonaSeleccionada)
       );
       setPatenteSeleccionada('');
       setZonaSeleccionada('');
-      setDuracion(60);
-      setCotizacion(null);
       setResultado('¡Estacionamiento iniciado correctamente!');
       cargarDatos();
     } catch (err: any) { setError(err.message); }
@@ -104,7 +84,7 @@ export default function ModuloEstacionamiento() {
     try {
       const token = await getToken();
       const res = await crearConductorService(token).finalizarSesion(id);
-      setResultado(`Sesión finalizada. Duración real: ${res.duracion_real_minutos} minutos.`);
+      setResultado(`Sesión finalizada. Duración real: ${res.duracion_real_minutos} minutos. Costo cobrado: $${res.costo_cobrado.toFixed(2)}.`);
       cargarDatos();
     } catch (err: any) { setError(err.message); }
     finally { setFinalizando(null); }
@@ -136,19 +116,11 @@ export default function ModuloEstacionamiento() {
               {zonas.map(z => <option key={z.id} value={z.id}>{z.nombre} — ${z.precio_hora}/hr</option>)}
             </select>
           </div>
-          <div className="campo">
-            <label>Duración estimada (minutos)</label>
-            <input type="number" min={15} step={15} value={duracion}
-              onChange={e => setDuracion(Number(e.target.value))} required />
+          <div className="alerta alerta-info">
+            Necesitas saldo positivo para iniciar.
           </div>
-          {cotizacion && (
-            <div className={`alerta ${cotizacion.saldo_suficiente ? 'alerta-info' : 'alerta-error'}`}>
-              Costo estimado: <strong>${cotizacion.costo.toFixed(2)}</strong>
-              {!cotizacion.saldo_suficiente && ' — Saldo insuficiente'}
-            </div>
-          )}
           <button type="submit" className="btn btn-primario btn-ancho"
-            disabled={iniciando || (cotizacion !== null && !cotizacion.saldo_suficiente)}>
+            disabled={iniciando}>
             {iniciando ? 'Iniciando...' : '▶ Iniciar estacionamiento'}
           </button>
         </form>

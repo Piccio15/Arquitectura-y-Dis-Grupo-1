@@ -44,17 +44,13 @@ export const EstacionamientoRepository = {
     datos: {
       patente: string;
       zonaId: number;
-      duracionEstimadaMinutos: number;
-      costoCobrado: number;
     },
     db: DatabaseClient = orm
   ) => {
     return await db.sesionestacionamiento.create({
       data: {
         patente: datos.patente,
-        zonaId: datos.zonaId,
-        duracion_estimada_minutos: datos.duracionEstimadaMinutos,
-        costo_cobrado: datos.costoCobrado
+        zonaId: datos.zonaId
       },
       include: { zona: true }
     });
@@ -90,14 +86,33 @@ export const EstacionamientoRepository = {
           }
         }
       },
-      include: { zona: true }
+      include: { zona: true, vehiculo: true }
     });
   },
 
-  finalizarSesion: async (sesionId: number, fechaFin: Date, db: DatabaseClient = orm) => {
-    return await db.sesionestacionamiento.update({
+  finalizarSesion: async (
+    sesionId: number,
+    fechaFin: Date,
+    costoCobrado: number,
+    db: DatabaseClient = orm
+  ) => {
+    const resultado = await db.sesionestacionamiento.updateMany({
+      where: {
+        id: sesionId,
+        fecha_fin: null
+      },
+      data: {
+        fecha_fin: fechaFin,
+        costo_cobrado: costoCobrado
+      }
+    });
+
+    if (resultado.count !== 1) {
+      return null;
+    }
+
+    return await db.sesionestacionamiento.findUnique({
       where: { id: sesionId },
-      data: { fecha_fin: fechaFin },
       include: { zona: true }
     });
   }

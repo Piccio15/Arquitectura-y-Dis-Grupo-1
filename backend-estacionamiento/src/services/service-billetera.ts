@@ -193,5 +193,22 @@ export const BilleteraService = {
     });
 
     return resultado.count === 1;
+  },
+
+  debitarSaldo: async (
+    conductorId: number,
+    monto: number,
+    db: Prisma.TransactionClient
+  ) => {
+    if (!Number.isFinite(monto) || monto < 0) {
+      throw new ErrorBilletera('El monto a descontar es invalido', 422);
+    }
+
+    return await db.conductor.update({
+      where: { id: conductorId },
+      data: {
+        saldo: { decrement: monto }
+      }
+    });
   }
 };
