@@ -2,6 +2,7 @@
 import { useNavigate } from 'react-router-dom';
 import { useUser } from '@clerk/clerk-react';
 import { motion } from 'framer-motion';
+import { ChevronRight, SearchCheck } from 'lucide-react';
 
 export default function MenuInspector() {
   const navigate = useNavigate();
@@ -31,12 +32,12 @@ export default function MenuInspector() {
           style={{ '--accent': '#ea580c' } as React.CSSProperties}
           onClick={() => navigate('verificar')}
         >
-          <div className="modulo-item-icono naranja">🔍</div>
+          <div className="modulo-item-icono naranja"><SearchCheck size={24} strokeWidth={2.3} /></div>
           <div className="modulo-item-texto">
             <div className="modulo-item-titulo">Verificar Patente</div>
             <div className="modulo-item-desc">Consultá el estado de un vehículo y emití infracciones</div>
           </div>
-          <span className="modulo-item-flecha">›</span>
+          <span className="modulo-item-flecha"><ChevronRight size={20} /></span>
         </div>
       </motion.div>
     </div>

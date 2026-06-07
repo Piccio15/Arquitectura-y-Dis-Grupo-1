@@ -7,6 +7,12 @@ import {
   correspondeCerrarPorFinDeHorario,
   estaDentroDelHorarioCobro
 } from './service-configuracion';
+import {
+  Coordenada,
+  esCoordenada,
+  parsearPoligono,
+  puntoEnPoligono
+} from './service-geometria';
 
 export class ErrorEstacionamiento extends Error {
   constructor(
@@ -23,7 +29,7 @@ function redondearImporte(importe: number) {
 
 function validarDatosInicio(datos: {
   patente: string;
-  zonaId: number;
+  ubicacion: Coordenada;
 }) {
   if (typeof datos?.patente !== 'string' || !datos.patente.trim()) {
     throw new ErrorEstacionamiento('La patente es obligatoria', 400);
@@ -31,8 +37,8 @@ function validarDatosInicio(datos: {
 
   const patente = datos.patente.trim().toUpperCase();
 
-  if (!Number.isInteger(datos.zonaId) || datos.zonaId <= 0) {
-    throw new ErrorEstacionamiento('La zona es invalida', 400);
+  if (!esCoordenada(datos.ubicacion)) {
+    throw new ErrorEstacionamiento('La ubicacion es invalida', 400);
   }
 
   return patente;
@@ -89,7 +95,7 @@ export const EstacionamientoService = {
     clerkId: string,
     datos: {
       patente: string;
-      zonaId: number;
+      ubicacion: Coordenada;
     }
   ) => {
     const patente = validarDatosInicio(datos);
@@ -126,10 +132,14 @@ export const EstacionamientoService = {
         throw new ErrorEstacionamiento('El vehiculo ya tiene una sesion activa', 409);
       }
 
-      const zona = await EstacionamientoRepository.buscarZonaPorId(datos.zonaId, tx);
+      const zonas = await EstacionamientoRepository.listarZonas(tx);
+      const zona = zonas.find(zonaCandidata => puntoEnPoligono(
+        datos.ubicacion,
+        parsearPoligono(zonaCandidata.coordenadas)
+      ));
 
       if (!zona) {
-        throw new ErrorEstacionamiento('La zona no existe', 404);
+        throw new ErrorEstacionamiento('La ubicacion seleccionada no pertenece a una zona tarifada', 422);
       }
 
       return await EstacionamientoRepository.crearSesion({

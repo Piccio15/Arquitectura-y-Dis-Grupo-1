@@ -34,6 +34,10 @@ export const EstacionamientoRepository = {
     });
   },
 
+  listarZonas: async (db: DatabaseClient = orm) => {
+    return await db.zona.findMany();
+  },
+
   buscarSesionActivaPorPatente: async (patente: string, db: DatabaseClient = orm) => {
     return await db.sesionestacionamiento.findFirst({
       where: {

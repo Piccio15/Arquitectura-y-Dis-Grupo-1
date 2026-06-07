@@ -1,11 +1,15 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useAuth } from '@clerk/clerk-react';
+import L from 'leaflet';
+import 'leaflet/dist/leaflet.css';
+import { Play, Timer } from 'lucide-react';
 import { crearConductorService } from '../../servicios/conductor-servicio';
 import {
   crearConfiguracionService,
   type HorarioCobro
 } from '../../servicios/configuracion-servicio';
 import type { SesionActiva, Vehiculo } from '../../types/conductor-interface';
+import type { Coordenada, Zona } from '../../types/zona-interface';
 
 function TiempoTranscurrido({ desde }: { desde: string }) {
   const inicio = new Date(desde).getTime();
@@ -21,11 +25,129 @@ function TiempoTranscurrido({ desde }: { desde: string }) {
   return <span style={{ fontFamily: 'JetBrains Mono, monospace', fontWeight: 700, fontSize: '1.3rem', color: '#1e2d6b' }}>{hh}:{mm}:{ss}</span>;
 }
 
+function puntoEnPoligono(punto: Coordenada, poligono: Coordenada[]) {
+  if (poligono.length < 3) return false;
+
+  let dentro = false;
+
+  for (let i = 0, j = poligono.length - 1; i < poligono.length; j = i++) {
+    const actual = poligono[i];
+    const anterior = poligono[j];
+    const cruzaLatitud = actual.lat > punto.lat !== anterior.lat > punto.lat;
+
+    if (!cruzaLatitud) continue;
+
+    const lngInterseccion = (
+      (anterior.lng - actual.lng) * (punto.lat - actual.lat)
+      / (anterior.lat - actual.lat)
+    ) + actual.lng;
+
+    if (punto.lng < lngInterseccion) {
+      dentro = !dentro;
+    }
+  }
+
+  return dentro;
+}
+
+const iconoUbicacionSeleccionada = L.divIcon({
+  html: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="34" height="34">
+    <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z" fill="#dc2626"/>
+    <circle cx="12" cy="9" r="2.5" fill="white"/>
+  </svg>`,
+  className: '',
+  iconSize: [34, 34],
+  iconAnchor: [17, 34],
+});
+
+function MapaSeleccionUbicacion({
+  zonas,
+  ubicacionSeleccionada,
+  onSeleccionar
+}: {
+  zonas: Zona[];
+  ubicacionSeleccionada: Coordenada | null;
+  onSeleccionar: (coordenada: Coordenada) => void;
+}) {
+  const contenedorRef = useRef<HTMLDivElement>(null);
+  const mapaRef = useRef<L.Map | null>(null);
+  const marcadorRef = useRef<L.Marker | null>(null);
+  const poligonosRef = useRef<L.Polygon[]>([]);
+  const onSeleccionarRef = useRef(onSeleccionar);
+
+  useEffect(() => {
+    onSeleccionarRef.current = onSeleccionar;
+  }, [onSeleccionar]);
+
+  useEffect(() => {
+    if (!contenedorRef.current || mapaRef.current) return;
+
+    const mapa = L.map(contenedorRef.current).setView([-38.7196, -62.2663], 14);
+    mapaRef.current = mapa;
+
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '&copy; OpenStreetMap contributors'
+    }).addTo(mapa);
+
+    mapa.on('click', (e: L.LeafletMouseEvent) => {
+      onSeleccionarRef.current({ lat: e.latlng.lat, lng: e.latlng.lng });
+    });
+
+    return () => {
+      mapa.remove();
+      mapaRef.current = null;
+    };
+  }, []);
+
+  useEffect(() => {
+    const mapa = mapaRef.current;
+    if (!mapa) return;
+
+    poligonosRef.current.forEach(poligono => poligono.remove());
+    poligonosRef.current = [];
+
+    zonas.forEach(zona => {
+      if (!Array.isArray(zona.coordenadas) || zona.coordenadas.length < 3) return;
+
+      const poligono = L.polygon(
+        zona.coordenadas.map(punto => [punto.lat, punto.lng] as [number, number]),
+        { color: '#2563eb', fillColor: '#3b82f6', fillOpacity: 0.18, weight: 2 }
+      ).addTo(mapa);
+
+      poligono.bindTooltip(`${zona.nombre} - $${zona.precio_hora}/hr`);
+      poligonosRef.current.push(poligono);
+    });
+  }, [zonas]);
+
+  useEffect(() => {
+    const mapa = mapaRef.current;
+    if (!mapa) return;
+
+    if (!ubicacionSeleccionada) {
+      marcadorRef.current?.remove();
+      marcadorRef.current = null;
+      return;
+    }
+
+    const posicion: [number, number] = [ubicacionSeleccionada.lat, ubicacionSeleccionada.lng];
+
+    if (!marcadorRef.current) {
+      marcadorRef.current = L.marker(posicion, { icon: iconoUbicacionSeleccionada }).addTo(mapa);
+    } else {
+      marcadorRef.current.setLatLng(posicion);
+    }
+
+    mapa.setView(posicion, Math.max(mapa.getZoom(), 15));
+  }, [ubicacionSeleccionada]);
+
+  return <div ref={contenedorRef} style={{ height: '320px', width: '100%', borderRadius: '12px', overflow: 'hidden' }} />;
+}
+
 export default function ModuloEstacionamiento() {
   const { getToken } = useAuth();
   const [sesiones, setSesiones] = useState<SesionActiva[]>([]);
   const [vehiculos, setVehiculos] = useState<Vehiculo[]>([]);
-  const [zonas, setZonas] = useState<{ id: number; nombre: string; precio_hora: number }[]>([]);
+  const [zonas, setZonas] = useState<Zona[]>([]);
   const [cargando, setCargando] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [resultado, setResultado] = useState<string | null>(null);
@@ -34,7 +156,7 @@ export default function ModuloEstacionamiento() {
 
   // Form iniciar
   const [patenteSeleccionada, setPatenteSeleccionada] = useState('');
-  const [zonaSeleccionada, setZonaSeleccionada] = useState('');
+  const [ubicacionSeleccionada, setUbicacionSeleccionada] = useState<Coordenada | null>(null);
   const [iniciando, setIniciando] = useState(false);
 
   const cargarDatos = async () => {
@@ -74,11 +196,20 @@ export default function ModuloEstacionamiento() {
     setIniciando(true);
     try {
       const token = await getToken();
+      if (!ubicacionSeleccionada) {
+        throw new Error('Selecciona una ubicacion en el mapa');
+      }
+
+      if (!zonas.find(zona => puntoEnPoligono(ubicacionSeleccionada, zona.coordenadas ?? []))) {
+        throw new Error('La ubicacion seleccionada no pertenece a una zona tarifada');
+      }
+
       await crearConductorService(token).iniciarSesion(
-        patenteSeleccionada, Number(zonaSeleccionada)
+        patenteSeleccionada,
+        ubicacionSeleccionada
       );
       setPatenteSeleccionada('');
-      setZonaSeleccionada('');
+      setUbicacionSeleccionada(null);
       setResultado('¡Estacionamiento iniciado correctamente!');
       cargarDatos();
     } catch (err: any) { setError(err.message); }
@@ -99,6 +230,10 @@ export default function ModuloEstacionamiento() {
   };
 
   if (cargando) return <div className="spinner-wrap"><div className="spinner" /></div>;
+
+  const zonaDetectada = ubicacionSeleccionada
+    ? zonas.find(zona => puntoEnPoligono(ubicacionSeleccionada, zona.coordenadas ?? []))
+    : null;
 
   return (
     <div>
@@ -125,18 +260,29 @@ export default function ModuloEstacionamiento() {
             </select>
           </div>
           <div className="campo">
-            <label>Zona</label>
-            <select value={zonaSeleccionada} onChange={e => setZonaSeleccionada(e.target.value)} required>
-              <option value="">Seleccioná una zona</option>
-              {zonas.map(z => <option key={z.id} value={z.id}>{z.nombre} — ${z.precio_hora}/hr</option>)}
-            </select>
+            <label>Ubicacion</label>
+            <MapaSeleccionUbicacion
+              zonas={zonas}
+              ubicacionSeleccionada={ubicacionSeleccionada}
+              onSeleccionar={setUbicacionSeleccionada}
+            />
           </div>
+          {ubicacionSeleccionada && zonaDetectada && (
+            <div className="alerta alerta-exito">
+              Zona detectada: <strong>{zonaDetectada.nombre}</strong> - ${zonaDetectada.precio_hora}/hr.
+            </div>
+          )}
+          {ubicacionSeleccionada && !zonaDetectada && (
+            <div className="alerta alerta-error">
+              La ubicacion seleccionada no pertenece a una zona tarifada.
+            </div>
+          )}
           <div className="alerta alerta-info">
             Necesitas saldo positivo y estar dentro del horario de cobro para iniciar.
           </div>
           <button type="submit" className="btn btn-primario btn-ancho"
-            disabled={iniciando || horarioCobro?.cobro_activo === false}>
-            {iniciando ? 'Iniciando...' : '▶ Iniciar estacionamiento'}
+            disabled={iniciando || horarioCobro?.cobro_activo === false || !ubicacionSeleccionada || !zonaDetectada}>
+            {iniciando ? 'Iniciando...' : <><Play size={17} /> Iniciar estacionamiento</>}
           </button>
         </form>
       </div>
@@ -146,7 +292,7 @@ export default function ModuloEstacionamiento() {
 
       {sesiones.length === 0 ? (
         <div className="estado-vacio">
-          <div className="estado-vacio-icono">⏱️</div>
+          <div className="estado-vacio-icono"><Timer size={44} strokeWidth={1.8} /></div>
           <p>No tenés sesiones activas en este momento.</p>
         </div>
       ) : (

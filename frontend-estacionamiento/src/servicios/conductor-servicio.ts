@@ -1,4 +1,5 @@
 import type { Vehiculo, SesionActiva, Multa, PerfilConductor, PreferenciaPago } from '../types/conductor-interface';
+import type { Coordenada } from '../types/zona-interface';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
 
@@ -49,11 +50,11 @@ export const crearConductorService = (token: string | null) => ({
     return manejarRespuesta<SesionActiva[]>(res);
   },
 
-  iniciarSesion: async (patente: string, zonaId: number): Promise<SesionActiva> => {
+  iniciarSesion: async (patente: string, ubicacion: Coordenada): Promise<SesionActiva> => {
     const res = await fetch(`${API_URL}/estacionamientos/iniciar`, {
       method: 'POST',
       headers: headers(token),
-      body: JSON.stringify({ patente, zonaId }),
+      body: JSON.stringify({ patente, ubicacion }),
     });
     return manejarRespuesta<SesionActiva>(res);
   },

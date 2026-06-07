@@ -1,6 +1,7 @@
 // src/componentes/conductor/ModuloMultas.tsx
 import { useState, useEffect } from 'react';
 import { useAuth } from '@clerk/clerk-react';
+import { CircleCheck } from 'lucide-react';
 import { crearConductorService } from '../../servicios/conductor-servicio';
 import type { Multa } from '../../types/conductor-interface';
 
@@ -47,7 +48,7 @@ export function ModuloMultas() {
 
       {multas.length === 0 ? (
         <div className="estado-vacio">
-          <div className="estado-vacio-icono">✅</div>
+          <div className="estado-vacio-icono"><CircleCheck size={44} strokeWidth={1.8} /></div>
           <p>No tenés infracciones registradas.</p>
         </div>
       ) : (

@@ -1,6 +1,7 @@
 // src/componentes/inspector/ModuloVerificarPatente.tsx
 import { useState } from 'react';
 import { useAuth } from '@clerk/clerk-react';
+import { Ban, CircleCheck, ClipboardList, Search } from 'lucide-react';
 import { crearInspectorService, type EstadoVerificacionDTO } from '../../servicios/inspector-servicio';
 
 export default function ModuloVerificarPatente() {
@@ -55,7 +56,9 @@ const emitirMulta = async () => {
       maxWidth: '360px', width: '90%', textAlign: 'center',
       boxShadow: '0 20px 60px rgba(0,0,0,0.2)'
     }}>
-      <div style={{ fontSize: '2.5rem', marginBottom: '0.75rem' }}>📋</div>
+      <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '0.75rem' }}>
+        <ClipboardList size={48} color="#1e2d6b" />
+      </div>
       <p style={{ fontSize: '1rem', fontWeight: 700, color: '#0f172a', marginBottom: '0.5rem' }}>
         Infracción emitida
       </p>
@@ -88,7 +91,7 @@ const emitirMulta = async () => {
             />
           </div>
           <button type="submit" className="btn btn-primario btn-ancho" disabled={cargando} style={{ background: 'var(--naranja)', height: '48px' }}>
-            {cargando ? 'Consultando base de datos...' : '🔍 Verificar'}
+            {cargando ? 'Consultando base de datos...' : <><Search size={17} /> Verificar</>}
           </button>
         </form>
       </div>
@@ -98,7 +101,9 @@ const emitirMulta = async () => {
       {resultado && (
         <div className={resultado.tieneSesionActiva ? 'resultado-ok' : 'resultado-mal'}>
           <div className="resultado-titulo" style={{ color: resultado.tieneSesionActiva ? 'var(--verde)' : 'var(--rojo)' }}>
-            {resultado.tieneSesionActiva ? '✅ Vehículo en regla' : '⛔ Sin sesión activa'}
+            {resultado.tieneSesionActiva
+              ? <><CircleCheck size={20} /> Vehiculo en regla</>
+              : <><Ban size={20} /> Sin sesion activa</>}
           </div>
 
           <div className="patente-display" style={{ margin: '0.875rem 0', background: 'rgba(255,255,255,0.7)', borderColor: 'rgba(0,0,0,0.08)' }}>
@@ -126,7 +131,7 @@ const emitirMulta = async () => {
                 onClick={emitirMulta}
                 disabled={emitiendo}
               >
-                {emitiendo ? 'Emitiendo...' : '📋 Emitir Infracción'}
+                {emitiendo ? 'Emitiendo...' : <><ClipboardList size={17} /> Emitir Infraccion</>}
               </button>
             </div>
           )}
