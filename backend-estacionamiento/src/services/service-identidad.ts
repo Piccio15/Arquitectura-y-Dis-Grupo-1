@@ -12,11 +12,18 @@ export const IdentidadService = {
       throw new Error('El usuario de Clerk no tiene un email principal');
     }
 
-    const usuario = await UsuarioRepository.sincronizarConductor(clerkId, emailPrincipal);
+    const usuarioExistente = await UsuarioRepository.buscarPorClerkId(clerkId);
+    const rol = usuarioExistente?.rol ?? 'CONDUCTOR';
+
+    const usuario = await UsuarioRepository.sincronizarUsuario({
+      clerkId,
+      email: emailPrincipal,
+      rol
+    });
 
     await clerkClient.users.updateUserMetadata(clerkId, {
       publicMetadata: {
-        role: usuario.rol
+        role: usuario?.rol
       }
     });
 

@@ -28,12 +28,6 @@ export const EstacionamientoRepository = {
     });
   },
 
-  buscarZonaPorId: async (zonaId: number, db: DatabaseClient = orm) => {
-    return await db.zona.findUnique({
-      where: { id: zonaId }
-    });
-  },
-
   listarZonas: async (db: DatabaseClient = orm) => {
     return await db.zona.findMany();
   },

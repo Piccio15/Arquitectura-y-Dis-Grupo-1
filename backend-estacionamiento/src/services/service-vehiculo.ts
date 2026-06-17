@@ -13,8 +13,12 @@ export const VehiculoService = {
     return await VehiculoRepository.listarVehiculosDelConductor(conductor.id);
   },
 
-  registrarVehiculo: async (clerkId: string, patente: string) => {
-      const patenteNorm = patente.trim().toUpperCase().replace(/\s+/g, '');
+  registrarVehiculo: async (clerkId: string, patente: unknown) => {
+    if (typeof patente !== 'string') {
+      throw new ErrorVehiculo('La patente es requerida', 400);
+    }
+
+    const patenteNorm = patente.trim().toUpperCase().replace(/\s+/g, '');
     if (!patenteNorm) throw new ErrorVehiculo('La patente es requerida', 400);
 
     const conductor = await VehiculoRepository.buscarConductorPorClerkId(clerkId);

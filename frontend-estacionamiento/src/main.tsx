@@ -3,9 +3,12 @@ import React from 'react'
 import ReactDOM from 'react-dom/client'
 import App from './App.tsx'
 import { ClerkProvider } from '@clerk/clerk-react'
+import { registerSW } from 'virtual:pwa-register'
 import './index.css'
 
 const PUBLISHABLE_KEY = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY
+
+registerSW({ immediate: true })
 
 if (!PUBLISHABLE_KEY) {
   throw new Error("Missing Publishable Key")
