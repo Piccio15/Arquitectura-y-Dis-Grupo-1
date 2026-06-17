@@ -4,6 +4,8 @@ import { orm } from '../repositories/orm-config';
 import { PagoRepository } from '../repositories/repository-pago';
 import { MultaService } from './service-multa';
 
+const MINUTOS_EXPIRACION_OPERACION_PENDIENTE = 10;
+
 export class ErrorBilletera extends Error {
   constructor(
     message: string,
@@ -17,6 +19,27 @@ function validarMonto(monto: number) {
   if (!Number.isFinite(monto) || monto <= 0) {
     throw new ErrorBilletera('El monto debe ser mayor a cero', 400);
   }
+}
+
+function reconstruirPreferencia(operacion: {
+  id: number;
+  mercadoPagoPreferenceId: string;
+}) {
+  const preferenceId = operacion.mercadoPagoPreferenceId;
+
+  return {
+    operacionId: operacion.id,
+    preferenceId,
+    checkoutUrl: `https://www.mercadopago.com.ar/checkout/v1/redirect?pref_id=${encodeURIComponent(preferenceId)}`,
+    sandboxCheckoutUrl: `https://sandbox.mercadopago.com.ar/checkout/v1/redirect?pref_id=${encodeURIComponent(preferenceId)}`
+  };
+}
+
+function operacionPendienteExpirada(operacion: { fecha_creacion: Date }) {
+  const minutosTranscurridos =
+    (Date.now() - operacion.fecha_creacion.getTime()) / 60000;
+
+  return minutosTranscurridos >= MINUTOS_EXPIRACION_OPERACION_PENDIENTE;
 }
 
 async function crearPreferencia(operacion: {
@@ -85,7 +108,16 @@ export const BilleteraService = {
     const operacionActiva = await PagoRepository.buscarOperacionActivaDeMulta(multa.id_multa);
 
     if (operacionActiva) {
-      throw new ErrorBilletera('La multa ya tiene un pago iniciado o aprobado', 409);
+      if (operacionActiva.estado === 'PENDIENTE' && operacionPendienteExpirada(operacionActiva)) {
+        await PagoRepository.marcarFallida(operacionActiva.id);
+      } else if (operacionActiva.estado === 'PENDIENTE' && operacionActiva.mercadoPagoPreferenceId) {
+        return reconstruirPreferencia({
+          id: operacionActiva.id,
+          mercadoPagoPreferenceId: operacionActiva.mercadoPagoPreferenceId
+        });
+      } else {
+        throw new ErrorBilletera('La multa ya tiene un pago iniciado o aprobado', 409);
+      }
     }
 
     const operacion = await PagoRepository.crearOperacion({
@@ -173,7 +205,7 @@ export const BilleteraService = {
     return conductor;
   },
 
-  descontarSaldo: async (
+  debitarSaldo: async (
     conductorId: number,
     monto: number,
     db: Prisma.TransactionClient
@@ -182,16 +214,11 @@ export const BilleteraService = {
       throw new ErrorBilletera('El monto a descontar es invalido', 422);
     }
 
-    const resultado = await db.conductor.updateMany({
-      where: {
-        id: conductorId,
-        saldo: { gte: monto }
-      },
+    return await db.conductor.update({
+      where: { id: conductorId },
       data: {
         saldo: { decrement: monto }
       }
     });
-
-    return resultado.count === 1;
   }
 };

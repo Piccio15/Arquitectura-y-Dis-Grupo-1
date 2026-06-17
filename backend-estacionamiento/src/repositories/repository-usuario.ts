@@ -1,19 +1,13 @@
+import { usuario_rol } from '@prisma/client';
 import { orm } from './orm-config';
 
+type SincronizarUsuarioDatos = {
+  clerkId: string;
+  email: string;
+  rol: usuario_rol;
+};
+
 export const UsuarioRepository = {
-  buscarPorEmail: async (email: string) => {
-    return await orm.usuario.findUnique({
-      where: { email }
-    });
-  },
-
-  buscarPorId: async (id: number) => {
-    return await orm.usuario.findUnique({
-      where: { id },
-      include: { conductor: true, inspector: true }
-    });
-  },
-
   buscarPorClerkId: async (clerkId: string) => {
     return await orm.usuario.findUnique({
       where: { clerk_id: clerkId },
@@ -32,31 +26,56 @@ export const UsuarioRepository = {
     });
   },
 
-  sincronizarConductor: async (clerkId: string, email: string) => {
-    return await orm.usuario.upsert({
-      where: { clerk_id: clerkId },
-      update: { email },
-      create: {
-        clerk_id: clerkId,
-        email,
-        // Clerk owns authentication. The DNI is completed later in the profile flow.
-        dni: clerkId,
-        rol: 'CONDUCTOR',
-        conductor: {
-          create: { saldo: 0 }
+  sincronizarUsuario: async (datos: SincronizarUsuarioDatos) => {
+    return await orm.$transaction(async tx => {
+      const usuario = await tx.usuario.upsert({
+        where: { clerk_id: datos.clerkId },
+        update: {
+          email: datos.email,
+          rol: datos.rol
+        },
+        create: {
+          clerk_id: datos.clerkId,
+          email: datos.email,
+          // Clerk owns authentication. The DNI is completed later in the profile flow.
+          dni: datos.clerkId,
+          rol: datos.rol
         }
-      },
-      include: { conductor: true, inspector: true }
+      });
+
+      if (datos.rol === 'CONDUCTOR') {
+        await tx.conductor.upsert({
+          where: { usuarioId: usuario.id },
+          update: {},
+          create: {
+            usuarioId: usuario.id,
+            saldo: 0
+          }
+        });
+      }
+
+      if (datos.rol === 'INSPECTOR') {
+        await tx.conductor.deleteMany({
+          where: { usuarioId: usuario.id }
+        });
+
+        await tx.inspector.upsert({
+          where: { usuarioId: usuario.id },
+          update: {},
+          create: {
+            usuarioId: usuario.id,
+            legajo: `INS-${usuario.id}`
+          }
+        });
+      }
+
+      return await tx.usuario.findUnique({
+        where: { id: usuario.id },
+        include: { conductor: true, inspector: true }
+      });
     });
   },
 
-  actualizarSaldo: async (usuarioId: number, nuevoSaldo: number) => {
-    return await orm.conductor.update({
-      where: { usuarioId },
-      data: { saldo: nuevoSaldo }
-    });
-  },
-  
   buscarInspectorPorClerkId: async (clerkId: string) => {
     const usuario = await orm.usuario.findUnique({
       where: { clerk_id: clerkId },

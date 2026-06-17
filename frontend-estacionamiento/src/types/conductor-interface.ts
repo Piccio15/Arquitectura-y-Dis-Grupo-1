@@ -1,6 +1,5 @@
 export interface Vehiculo {
   patente: string;
-  conductorId: number;
 }
 
 export interface SesionActiva {
@@ -8,8 +7,7 @@ export interface SesionActiva {
   patente: string;
   zonaId: number;
   fecha_inicio: string;
-  duracion_estimada_minutos: number;
-  costo_cobrado: number;
+  costo_cobrado?: number | null;
   zona: { id: number; nombre: string; precio_hora: number; };
 }
 

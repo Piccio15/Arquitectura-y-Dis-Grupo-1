@@ -3,7 +3,7 @@ import { orm } from './orm-config';
 
 type DatabaseClient = Pick<
   Prisma.TransactionClient,
-  'conductor' | 'sesionestacionamiento' | 'vehiculo' | 'zona'
+  'conductor' | 'conductorvehiculo' | 'sesionestacionamiento' | 'vehiculo' | 'zona'
 >;
 
 export const EstacionamientoRepository = {
@@ -20,15 +20,16 @@ export const EstacionamientoRepository = {
     conductorId: number,
     db: DatabaseClient = orm
   ) => {
-    return await db.vehiculo.findFirst({
-      where: { patente, conductorId }
+    return await db.conductorvehiculo.findUnique({
+      where: {
+        conductorId_patente: { conductorId, patente }
+      },
+      include: { vehiculo: true }
     });
   },
 
-  buscarZonaPorId: async (zonaId: number, db: DatabaseClient = orm) => {
-    return await db.zona.findUnique({
-      where: { id: zonaId }
-    });
+  listarZonas: async (db: DatabaseClient = orm) => {
+    return await db.zona.findMany();
   },
 
   buscarSesionActivaPorPatente: async (patente: string, db: DatabaseClient = orm) => {
@@ -44,8 +45,7 @@ export const EstacionamientoRepository = {
     datos: {
       patente: string;
       zonaId: number;
-      duracionEstimadaMinutos: number;
-      costoCobrado: number;
+      conductorId: number;
     },
     db: DatabaseClient = orm
   ) => {
@@ -53,8 +53,7 @@ export const EstacionamientoRepository = {
       data: {
         patente: datos.patente,
         zonaId: datos.zonaId,
-        duracion_estimada_minutos: datos.duracionEstimadaMinutos,
-        costo_cobrado: datos.costoCobrado
+        conductorId: datos.conductorId
       },
       include: { zona: true }
     });
@@ -64,14 +63,20 @@ export const EstacionamientoRepository = {
     return await orm.sesionestacionamiento.findMany({
       where: {
         fecha_fin: null,
-        vehiculo: {
-          conductor: {
-            usuario: { clerk_id: clerkId }
-          }
+        conductor: {
+          usuario: { clerk_id: clerkId }
         }
       },
       include: { zona: true },
       orderBy: { fecha_inicio: 'desc' }
+    });
+  },
+
+  listarSesionesActivas: async (db: DatabaseClient = orm) => {
+    return await db.sesionestacionamiento.findMany({
+      where: { fecha_fin: null },
+      include: { zona: true, vehiculo: true },
+      orderBy: { fecha_inicio: 'asc' }
     });
   },
 
@@ -84,20 +89,47 @@ export const EstacionamientoRepository = {
       where: {
         id: sesionId,
         fecha_fin: null,
-        vehiculo: {
-          conductor: {
-            usuario: { clerk_id: clerkId }
-          }
+        conductor: {
+          usuario: { clerk_id: clerkId }
         }
       },
-      include: { zona: true }
+      include: { zona: true, vehiculo: true }
     });
   },
 
-  finalizarSesion: async (sesionId: number, fechaFin: Date, db: DatabaseClient = orm) => {
-    return await db.sesionestacionamiento.update({
+  buscarSesionActivaPorId: async (sesionId: number, db: DatabaseClient = orm) => {
+    return await db.sesionestacionamiento.findFirst({
+      where: {
+        id: sesionId,
+        fecha_fin: null
+      },
+      include: { zona: true, vehiculo: true }
+    });
+  },
+
+  finalizarSesion: async (
+    sesionId: number,
+    fechaFin: Date,
+    costoCobrado: number,
+    db: DatabaseClient = orm
+  ) => {
+    const resultado = await db.sesionestacionamiento.updateMany({
+      where: {
+        id: sesionId,
+        fecha_fin: null
+      },
+      data: {
+        fecha_fin: fechaFin,
+        costo_cobrado: costoCobrado
+      }
+    });
+
+    if (resultado.count !== 1) {
+      return null;
+    }
+
+    return await db.sesionestacionamiento.findUnique({
       where: { id: sesionId },
-      data: { fecha_fin: fechaFin },
       include: { zona: true }
     });
   }

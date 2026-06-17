@@ -1,4 +1,5 @@
 import type { Vehiculo, SesionActiva, Multa, PerfilConductor, PreferenciaPago } from '../types/conductor-interface';
+import type { Coordenada } from '../types/zona-interface';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
 
@@ -49,30 +50,21 @@ export const crearConductorService = (token: string | null) => ({
     return manejarRespuesta<SesionActiva[]>(res);
   },
 
-  cotizarSesion: async (patente: string, zonaId: number, duracionEstimadaMinutos: number) => {
-    const res = await fetch(`${API_URL}/estacionamientos/cotizar`, {
-      method: 'POST',
-      headers: headers(token),
-      body: JSON.stringify({ patente, zonaId, duracionEstimadaMinutos }),
-    });
-    return manejarRespuesta<{ costo: number; saldo_actual: number; saldo_suficiente: boolean }>(res);
-  },
-
-  iniciarSesion: async (patente: string, zonaId: number, duracionEstimadaMinutos: number): Promise<SesionActiva> => {
+  iniciarSesion: async (patente: string, ubicacion: Coordenada): Promise<SesionActiva> => {
     const res = await fetch(`${API_URL}/estacionamientos/iniciar`, {
       method: 'POST',
       headers: headers(token),
-      body: JSON.stringify({ patente, zonaId, duracionEstimadaMinutos }),
+      body: JSON.stringify({ patente, ubicacion }),
     });
     return manejarRespuesta<SesionActiva>(res);
   },
 
-  finalizarSesion: async (id: number): Promise<{ duracion_real_minutos: number }> => {
+  finalizarSesion: async (id: number): Promise<{ duracion_real_minutos: number; costo_cobrado: number }> => {
     const res = await fetch(`${API_URL}/estacionamientos/${id}/finalizar`, {
       method: 'PUT',
       headers: headers(token),
     });
-    return manejarRespuesta<{ duracion_real_minutos: number }>(res);
+    return manejarRespuesta<{ duracion_real_minutos: number; costo_cobrado: number }>(res);
   },
 
   obtenerMultas: async (): Promise<Multa[]> => {

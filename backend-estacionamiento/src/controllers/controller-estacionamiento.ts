@@ -16,22 +16,6 @@ function responderError(res: Response, error: unknown) {
 }
 
 export const EstacionamientoController = {
-  cotizarSesion: async (req: Request, res: Response) => {
-    const { userId } = getAuth(req);
-
-    if (!userId) {
-      res.status(401).json({ error: 'Autenticacion requerida' });
-      return;
-    }
-
-    try {
-      const cotizacion = await EstacionamientoService.cotizarSesion(userId, req.body);
-      res.json(cotizacion);
-    } catch (error) {
-      responderError(res, error);
-    }
-  },
-
   iniciarSesion: async (req: Request, res: Response) => {
     const { userId } = getAuth(req);
 

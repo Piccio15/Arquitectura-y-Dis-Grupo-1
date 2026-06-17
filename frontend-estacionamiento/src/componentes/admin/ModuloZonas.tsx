@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '@clerk/clerk-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { CircleCheck, CircleX, MapPin } from 'lucide-react';
 import { crearZonaService } from '../../servicios/zona-servicio';
 import { ZonaForm } from '../zonas/ZonaForm';
 import type { Zona } from '../../types/zona-interface';
@@ -23,7 +24,7 @@ function Modal({ mensaje, tipo, onCerrar }: { mensaje: string; tipo: 'exito' | '
         >
           <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ delay: 0.1, type: 'spring', stiffness: 400 }}
             style={{ fontSize: '2.75rem', marginBottom: '0.75rem' }}>
-            {tipo === 'exito' ? '✅' : '❌'}
+            {tipo === 'exito' ? <CircleCheck size={48} color="#16a34a" /> : <CircleX size={48} color="#dc2626" />}
           </motion.div>
           <p style={{ fontSize: '1rem', fontWeight: 600, color: '#0f172a', marginBottom: '1.25rem' }}>{mensaje}</p>
           <button className="btn btn-primario" onClick={onCerrar} style={{ width: '100%' }}>Aceptar</button>
@@ -131,7 +132,7 @@ export default function ModuloZonas() {
         <div className="spinner-wrap"><div className="spinner" /></div>
       ) : zonas.length === 0 ? (
         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="estado-vacio">
-          <div className="estado-vacio-icono">📍</div>
+          <div className="estado-vacio-icono"><MapPin size={44} strokeWidth={1.8} /></div>
           <p>No hay zonas configuradas todavía.</p>
         </motion.div>
       ) : (

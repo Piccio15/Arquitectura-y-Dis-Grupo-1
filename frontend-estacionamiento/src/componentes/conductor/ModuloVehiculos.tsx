@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '@clerk/clerk-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { Car } from 'lucide-react';
 import { crearConductorService } from '../../servicios/conductor-servicio';
 import type { Vehiculo } from '../../types/conductor-interface';
 
@@ -109,7 +110,7 @@ export default function ModuloVehiculos() {
         <div className="spinner-wrap"><div className="spinner" /></div>
       ) : vehiculos.length === 0 ? (
         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="estado-vacio">
-          <div className="estado-vacio-icono">🚗</div>
+          <div className="estado-vacio-icono"><Car size={44} strokeWidth={1.8} /></div>
           <p>Todavía no tenés vehículos registrados.</p>
         </motion.div>
       ) : (
@@ -128,7 +129,7 @@ export default function ModuloVehiculos() {
                   <span className="lista-item-subtitulo">Vehículo registrado</span>
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                  <span style={{ fontSize: '1.2rem' }}>🚗</span>
+                  <Car size={22} strokeWidth={2.1} color="#64748b" />
                   <motion.button
                     whileHover={{ scale: 1.05 }}
                     whileTap={{ scale: 0.95 }}

@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth, useUser } from '@clerk/clerk-react';
 import { motion } from 'framer-motion';
+import { Car, ChevronRight, ClipboardList, Timer, Wallet } from 'lucide-react';
 import { crearConductorService } from '../../servicios/conductor-servicio';
 
 const item = { hidden: { opacity: 0, x: -16 }, show: { opacity: 1, x: 0 } };
@@ -29,10 +30,10 @@ export default function MenuConductor() {
   }, [getToken]);
 
   const modulos = [
-    { ruta: 'vehiculos', icono: '🚗', color: 'azul', titulo: 'Mis Vehiculos', desc: 'Administra tus patentes registradas', accent: '#2563eb' },
-    { ruta: 'estacionamiento', icono: '⏱️', color: 'verde', titulo: 'Estacionamiento', desc: 'Ver y finalizar sesiones activas', accent: '#16a34a' },
-    { ruta: 'saldo', icono: '💳', color: 'azul', titulo: 'Billetera Virtual', desc: 'Recargar saldo para estacionar', accent: '#2563eb' },
-    { ruta: 'multas', icono: '📋', color: 'naranja', titulo: 'Infracciones', desc: 'Ver y pagar multas pendientes', accent: '#ea580c' },
+    { ruta: 'vehiculos', Icono: Car, color: 'azul', titulo: 'Mis Vehiculos', desc: 'Administra tus patentes registradas', accent: '#2563eb' },
+    { ruta: 'estacionamiento', Icono: Timer, color: 'verde', titulo: 'Estacionamiento', desc: 'Ver y finalizar sesiones activas', accent: '#16a34a' },
+    { ruta: 'saldo', Icono: Wallet, color: 'azul', titulo: 'Billetera Virtual', desc: 'Recargar saldo para estacionar', accent: '#2563eb' },
+    { ruta: 'multas', Icono: ClipboardList, color: 'naranja', titulo: 'Infracciones', desc: 'Ver y pagar multas pendientes', accent: '#ea580c' },
   ];
 
   return (
@@ -67,12 +68,12 @@ export default function MenuConductor() {
             style={{ '--accent': modulo.accent } as React.CSSProperties}
             onClick={() => navigate(modulo.ruta)}
           >
-            <div className={`modulo-item-icono ${modulo.color}`}>{modulo.icono}</div>
+            <div className={`modulo-item-icono ${modulo.color}`}><modulo.Icono size={24} strokeWidth={2.3} /></div>
             <div className="modulo-item-texto">
               <div className="modulo-item-titulo">{modulo.titulo}</div>
               <div className="modulo-item-desc">{modulo.desc}</div>
             </div>
-            <span className="modulo-item-flecha">&gt;</span>
+            <span className="modulo-item-flecha"><ChevronRight size={20} /></span>
           </motion.div>
         ))}
       </motion.div>

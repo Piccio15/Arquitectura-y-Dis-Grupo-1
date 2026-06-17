@@ -29,11 +29,11 @@ export const crearInspectorService = (token: string | null) => ({
     return manejarRespuesta<EstadoVerificacionDTO>(res);
   },
 
-  emitirMulta: async (patente: string, motivo: string, monto: number): Promise<void> => {
+  emitirMulta: async (patente: string, ubicacion: string, monto: number): Promise<void> => {
     const res = await fetch(`${API_URL}/inspectores/multas`, {
       method: 'POST',
       headers: headers(token),
-      body: JSON.stringify({ patente, motivo, monto, ubicacion: 'Sin ubicación especificada' })
+      body: JSON.stringify({ patente, ubicacion, monto })
     });
     return manejarRespuesta<void>(res);
   }

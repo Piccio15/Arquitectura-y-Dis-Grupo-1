@@ -1,6 +1,7 @@
 // src/componentes/conductor/ModuloMultas.tsx
 import { useState, useEffect } from 'react';
 import { useAuth } from '@clerk/clerk-react';
+import { CircleCheck } from 'lucide-react';
 import { crearConductorService } from '../../servicios/conductor-servicio';
 import type { Multa } from '../../types/conductor-interface';
 
@@ -9,7 +10,7 @@ export function ModuloMultas() {
   const [multas, setMultas] = useState<Multa[]>([]);
   const [cargando, setCargando] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [procesandoId, setProcesandoId] = useState<string | null>(null);
+  const [procesandoId, setProcesandoId] = useState<number | null>(null);
 
   const cargarDatos = async () => {
     setCargando(true);
@@ -23,15 +24,24 @@ export function ModuloMultas() {
 
   useEffect(() => { cargarDatos(); }, []);
 
-  const pagar = async (id: string) => {
+  const pagar = async (id: number) => {
     if (!confirm('¿Confirmar pago de esta infracción con tu saldo virtual?')) return;
     setProcesandoId(id);
+    setError(null);
     try {
       const token = await getToken();
-      await crearConductorService(token).pagarMulta(id);
-      cargarDatos();
-    } catch (err: any) { setError(err.message); }
-    finally { setProcesandoId(null); }
+      const preferencia = await crearConductorService(token).pagarMulta(id);
+      const checkoutUrl = preferencia.sandboxCheckoutUrl || preferencia.checkoutUrl;
+
+      if (!checkoutUrl) {
+        throw new Error('Mercado Pago no devolvio una URL de checkout');
+      }
+
+      window.location.assign(checkoutUrl);
+    } catch (err: any) {
+      setError(err.message);
+      setProcesandoId(null);
+    }
   };
 
   if (cargando) return <div className="spinner-wrap"><div className="spinner" /></div>;
@@ -47,7 +57,7 @@ export function ModuloMultas() {
 
       {multas.length === 0 ? (
         <div className="estado-vacio">
-          <div className="estado-vacio-icono">✅</div>
+          <div className="estado-vacio-icono"><CircleCheck size={44} strokeWidth={1.8} /></div>
           <p>No tenés infracciones registradas.</p>
         </div>
       ) : (
@@ -59,21 +69,21 @@ export function ModuloMultas() {
               </p>
               <div className="lista" style={{ marginBottom: '1.5rem' }}>
                 {pendientes.map(m => (
-                  <div key={m.id} className="card" style={{ borderLeft: '3px solid var(--rojo)' }}>
+                  <div key={m.id_multa} className="card" style={{ borderLeft: '3px solid var(--rojo)' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '0.625rem' }}>
                       <span className="lista-item-titulo">{m.patente}</span>
                       <span style={{ fontWeight: 700, fontSize: '1.1rem', color: 'var(--rojo)' }}>
                         ${m.monto.toLocaleString()}
                       </span>
                     </div>
-                    <p style={{ fontSize: '0.85rem', color: 'var(--gris-500)', marginBottom: '0.875rem' }}>{m.motivo}</p>
+                    <p style={{ fontSize: '0.85rem', color: 'var(--gris-500)', marginBottom: '0.875rem' }}>{m.ubicacion}</p>
                     <button
                       className="btn btn-peligro btn-ancho"
                       style={{ height: '40px' }}
-                      onClick={() => pagar(m.id)}
-                      disabled={procesandoId === m.id}
+                      onClick={() => pagar(m.id_multa)}
+                      disabled={procesandoId === m.id_multa}
                     >
-                      {procesandoId === m.id ? 'Procesando...' : 'Pagar infracción'}
+                      {procesandoId === m.id_multa ? 'Procesando...' : 'Pagar infracción'}
                     </button>
                   </div>
                 ))}
@@ -88,10 +98,10 @@ export function ModuloMultas() {
               </p>
               <div className="lista">
                 {pagadas.map(m => (
-                  <div key={m.id} className="lista-item">
+                  <div key={m.id_multa} className="lista-item">
                     <div className="lista-item-izq">
                       <span className="lista-item-titulo">{m.patente}</span>
-                      <span className="lista-item-subtitulo">{m.motivo}</span>
+                      <span className="lista-item-subtitulo">{m.ubicacion}</span>
                     </div>
                     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '0.3rem' }}>
                       <span style={{ fontWeight: 600, color: 'var(--gris-500)' }}>${m.monto.toLocaleString()}</span>
