@@ -15,6 +15,13 @@ export const UsuarioRepository = {
     });
   },
 
+  buscarPorEmail: async (email: string) => {
+    return await orm.usuario.findUnique({
+      where: { email },
+      include: { conductor: true, inspector: true }
+    });
+  },
+
   buscarPermisosPorClerkId: async (clerkId: string) => {
     return await orm.usuario.findUnique({
       where: { clerk_id: clerkId },
@@ -55,10 +62,6 @@ export const UsuarioRepository = {
       }
 
       if (datos.rol === 'INSPECTOR') {
-        await tx.conductor.deleteMany({
-          where: { usuarioId: usuario.id }
-        });
-
         await tx.inspector.upsert({
           where: { usuarioId: usuario.id },
           update: {},
@@ -73,6 +76,38 @@ export const UsuarioRepository = {
         where: { id: usuario.id },
         include: { conductor: true, inspector: true }
       });
+    });
+  },
+
+  convertirEnInspectorPorEmail: async (email: string) => {
+    return await orm.$transaction(async tx => {
+      const usuario = await tx.usuario.findUnique({
+        where: { email },
+        include: { inspector: true }
+      });
+
+      if (!usuario) {
+        return null;
+      }
+
+      const usuarioActualizado = await tx.usuario.update({
+        where: { id: usuario.id },
+        data: { rol: 'INSPECTOR' }
+      });
+
+      const inspector = await tx.inspector.upsert({
+        where: { usuarioId: usuario.id },
+        update: {},
+        create: {
+          usuarioId: usuario.id,
+          legajo: `INS-${usuario.id}`
+        }
+      });
+
+      return {
+        ...usuarioActualizado,
+        inspector
+      };
     });
   },
 
