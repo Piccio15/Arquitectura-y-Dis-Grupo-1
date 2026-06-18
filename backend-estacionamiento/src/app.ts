@@ -15,12 +15,14 @@ import { EstacionamientoService } from './services/service-estacionamiento';
 
 const app = express();
 const PORT = process.env.PORT || 3000;
+const ORIGENES_PERMITIDOS = [
+  'http://localhost:5173',
+  'http://localhost:4173',
+  process.env.FRONTEND_URL
+].filter((origen): origen is string => Boolean(origen));
 
 app.use(cors({
-  origin: [
-    'http://localhost:5173',
-    'http://localhost:4173'
-  ],
+  origin: ORIGENES_PERMITIDOS,
   methods: ['GET', 'POST', 'PUT', 'DELETE'],
   allowedHeaders: ['Content-Type', 'Authorization']
 }));
