@@ -1,7 +1,6 @@
 import { useAuth, useUser } from '@clerk/clerk-react';
 import { useEffect } from 'react';
-
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
+import { API_URL } from './config-api';
 
 export function useSincronizacion() {
   const { getToken } = useAuth();

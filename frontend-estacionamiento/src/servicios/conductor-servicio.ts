@@ -1,7 +1,6 @@
 import type { Vehiculo, SesionActiva, Multa, PerfilConductor, PreferenciaPago } from '../types/conductor-interface';
 import type { Coordenada } from '../types/zona-interface';
-
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
+import { API_URL } from './config-api';
 
 const headers = (token: string | null) => ({
   'Content-Type': 'application/json',

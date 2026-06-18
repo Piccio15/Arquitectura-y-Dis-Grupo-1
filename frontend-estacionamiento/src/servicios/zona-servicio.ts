@@ -1,6 +1,5 @@
 import type { Zona, ZonaFormData } from '../types/zona-interface';
-
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
+import { API_URL } from './config-api';
 
 const headers = (token?: string | null) => ({
   'Content-Type': 'application/json',

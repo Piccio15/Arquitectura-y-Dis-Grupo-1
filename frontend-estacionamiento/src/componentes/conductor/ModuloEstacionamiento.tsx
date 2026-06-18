@@ -8,6 +8,7 @@ import {
   crearConfiguracionService,
   type HorarioCobro
 } from '../../servicios/configuracion-servicio';
+import { crearZonaService } from '../../servicios/zona-servicio';
 import type { SesionActiva, Vehiculo } from '../../types/conductor-interface';
 import type { Coordenada, Zona } from '../../types/zona-interface';
 
@@ -179,10 +180,8 @@ export default function ModuloEstacionamiento() {
 
   const cargarZonas = async () => {
     try {
-      const res = await fetch('http://localhost:3000/api/zonas', {
-        headers: { Authorization: `Bearer ${await getToken()}` }
-      });
-      const data = await res.json();
+      const token = await getToken();
+      const data = await crearZonaService(token).obtenerZonas();
       setZonas(data || []);
     } catch {}
   };

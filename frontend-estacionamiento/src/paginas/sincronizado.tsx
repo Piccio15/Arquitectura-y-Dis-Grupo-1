@@ -2,8 +2,7 @@ import { useEffect, useState } from 'react';
 import { useAuth, useUser } from '@clerk/clerk-react';
 import { useNavigate } from 'react-router-dom';
 import type { RolUsuario } from '../App';
-
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
+import { API_URL } from '../servicios/config-api';
 
 function rutaPorRol(rol: RolUsuario) {
   if (rol === 'ADMINISTRADOR') return '/admin';
