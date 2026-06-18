@@ -66,8 +66,8 @@ export default function ModuloZonas() {
       await crearZonaService(token).eliminarZona(id);
       setModal({ mensaje: 'Zona eliminada correctamente.', tipo: 'exito' });
       cargarZonas();
-    } catch {
-      setModal({ mensaje: 'No se pudo eliminar la zona.', tipo: 'error' });
+    } catch (err: any) {
+      setModal({ mensaje: err.message || 'No se pudo eliminar la zona.', tipo: 'error' });
     } finally { setEliminandoId(null); }
   };
 

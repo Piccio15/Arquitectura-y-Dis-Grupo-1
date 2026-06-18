@@ -24,7 +24,7 @@ export const ZonaService = {
   },
 
   actualizarZona: async (id: number, datos: { nombre: string; precio_hora: number; coordenadas: unknown }) => {
-    if (!Number.isInteger(id) || id <= 0) throw new ErrorZona('La zona es inválida', 400);
+    if (!Number.isInteger(id) || id <= 0) throw new ErrorZona('La zona es invalida', 400);
     if (!datos.nombre?.trim()) throw new ErrorZona('El nombre es requerido', 400);
     if (!datos.precio_hora || datos.precio_hora <= 0) throw new ErrorZona('El precio debe ser mayor a 0', 400);
 
@@ -39,9 +39,17 @@ export const ZonaService = {
   },
 
   eliminarZona: async (id: number) => {
-    if (!Number.isInteger(id) || id <= 0) throw new ErrorZona('La zona es inválida', 400);
+    if (!Number.isInteger(id) || id <= 0) throw new ErrorZona('La zona es invalida', 400);
+
     const zona = await ZonaRepository.buscarZonaPorId(id);
     if (!zona) throw new ErrorZona('La zona no existe', 404);
+
+    const sesionesAsociadas = await ZonaRepository.contarSesionesPorZona(id);
+
+    if (sesionesAsociadas > 0) {
+      throw new ErrorZona('No se puede eliminar una zona con sesiones de estacionamiento asociadas', 409);
+    }
+
     return await ZonaRepository.eliminarZona(id);
   }
 };

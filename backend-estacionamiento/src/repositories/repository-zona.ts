@@ -9,6 +9,12 @@ export const ZonaRepository = {
     return await orm.zona.findUnique({ where: { id } });
   },
 
+  contarSesionesPorZona: async (id: number) => {
+    return await orm.sesionestacionamiento.count({
+      where: { zonaId: id }
+    });
+  },
+
   crearZona: async (datos: { nombre: string; calles: string; precio_hora: number; coordenadas: object }) => {
     return await orm.zona.create({ data: datos });
   },
