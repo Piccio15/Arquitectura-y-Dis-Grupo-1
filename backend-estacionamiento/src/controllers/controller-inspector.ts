@@ -12,6 +12,34 @@ function responderError(res: Response, error: unknown) {
 }
 
 export const InspectorController = {
+  listarMultas: async (req: Request, res: Response) => {
+    const { userId } = getAuth(req);
+    if (!userId) { res.status(401).json({ error: 'Autenticacion requerida' }); return; }
+
+    try {
+      const resultado = await InspectorService.listarMultas(userId, {
+        q: req.query.q,
+        estado: req.query.estado,
+        fechaDesde: req.query.fechaDesde,
+        fechaHasta: req.query.fechaHasta,
+        pagina: req.query.pagina,
+        limite: req.query.limite
+      });
+
+      res.json(resultado);
+    } catch (error) { responderError(res, error); }
+  },
+
+  obtenerDetalleMulta: async (req: Request, res: Response) => {
+    const { userId } = getAuth(req);
+    if (!userId) { res.status(401).json({ error: 'Autenticacion requerida' }); return; }
+
+    try {
+      const multa = await InspectorService.obtenerDetalleMulta(userId, Number(req.params.id));
+      res.json(multa);
+    } catch (error) { responderError(res, error); }
+  },
+
   verificarPatente: async (req: Request, res: Response) => {
     const { userId } = getAuth(req);
     if (!userId) { res.status(401).json({ error: 'Autenticacion requerida' }); return; }

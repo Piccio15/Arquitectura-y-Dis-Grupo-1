@@ -2,7 +2,7 @@
 import { useNavigate } from 'react-router-dom';
 import { useUser } from '@clerk/clerk-react';
 import { motion } from 'framer-motion';
-import { ChevronRight, SearchCheck } from 'lucide-react';
+import { ChevronRight, ClipboardList, SearchCheck } from 'lucide-react';
 
 export default function MenuInspector() {
   const navigate = useNavigate();
@@ -36,6 +36,19 @@ export default function MenuInspector() {
           <div className="modulo-item-texto">
             <div className="modulo-item-titulo">Verificar Patente</div>
             <div className="modulo-item-desc">Consultá el estado de un vehículo y emití infracciones</div>
+          </div>
+          <span className="modulo-item-flecha"><ChevronRight size={20} /></span>
+        </div>
+
+        <div
+          className="modulo-item"
+          style={{ '--accent': '#2563eb' } as React.CSSProperties}
+          onClick={() => navigate('multas')}
+        >
+          <div className="modulo-item-icono azul"><ClipboardList size={24} strokeWidth={2.3} /></div>
+          <div className="modulo-item-texto">
+            <div className="modulo-item-titulo">Consultar Multas</div>
+            <div className="modulo-item-desc">Buscá infracciones por DNI, patente, fecha o estado</div>
           </div>
           <span className="modulo-item-flecha"><ChevronRight size={20} /></span>
         </div>

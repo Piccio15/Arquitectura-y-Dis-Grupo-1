@@ -19,6 +19,7 @@ import ModuloEstacionamiento from './componentes/conductor/ModuloEstacionamiento
 import { ModuloSaldo } from './componentes/conductor/ModuloSaldo';
 import { ModuloMultas } from './componentes/conductor/ModuloMultas';
 import ModuloVerificarPatente from './componentes/inspector/ModuloVerificarPatente';
+import ModuloConsultaMultas from './componentes/inspector/ModuloConsultaMultas';
 import Sincronizando from './paginas/sincronizado';
 
 
@@ -127,6 +128,7 @@ export default function App() {
         <Route path="/inspector" element={<RutaProtegida rolRequerido="INSPECTOR"><VistaInspector /></RutaProtegida>}>
           <Route index element={<MenuInspector />} />
           <Route path="verificar" element={<ModuloVerificarPatente />} />
+          <Route path="multas" element={<ModuloConsultaMultas />} />
         </Route>
 
         <Route path="*" element={<Navigate to="/" replace />} />

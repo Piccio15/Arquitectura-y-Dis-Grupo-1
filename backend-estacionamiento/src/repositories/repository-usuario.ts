@@ -1,4 +1,4 @@
-import { usuario_rol } from '@prisma/client';
+import { multa_estado, Prisma, usuario_rol } from '@prisma/client';
 import { orm } from './orm-config';
 
 type SincronizarUsuarioDatos = {
@@ -6,6 +6,57 @@ type SincronizarUsuarioDatos = {
   email: string;
   rol: usuario_rol;
 };
+
+type ListarMultasInspectorFiltros = {
+  inspectorId: number;
+  q?: string;
+  estado?: multa_estado;
+  fechaDesde?: Date;
+  fechaHasta?: Date;
+  pagina: number;
+  limite: number;
+};
+
+function construirWhereMultasInspector(filtros: ListarMultasInspectorFiltros): Prisma.multaWhereInput {
+  const where: Prisma.multaWhereInput = {
+    inspectorId: filtros.inspectorId
+  };
+
+  if (filtros.estado) {
+    where.estado = filtros.estado;
+  }
+
+  if (filtros.fechaDesde || filtros.fechaHasta) {
+    where.fecha = {
+      ...(filtros.fechaDesde && { gte: filtros.fechaDesde }),
+      ...(filtros.fechaHasta && { lte: filtros.fechaHasta })
+    };
+  }
+
+  if (filtros.q) {
+    const q = filtros.q.trim();
+    const patente = q.toUpperCase().replace(/\s+/g, '');
+
+    where.OR = [
+      { patente: { contains: patente } },
+      {
+        vehiculo: {
+          conductores: {
+            some: {
+              conductor: {
+                usuario: {
+                  dni: { contains: q }
+                }
+              }
+            }
+          }
+        }
+      }
+    ];
+  }
+
+  return where;
+}
 
 export const UsuarioRepository = {
   buscarPorClerkId: async (clerkId: string) => {
@@ -144,6 +195,97 @@ export const UsuarioRepository = {
         ubicacion: datos.ubicacion,
         monto: datos.monto,
         inspectorId: datos.inspectorId,
+      }
+    });
+  },
+
+  buscarMultaPendienteRecientePorPatente: async (patente: string, desde: Date) => {
+    return await orm.multa.findFirst({
+      where: {
+        patente: patente.toUpperCase(),
+        estado: 'PENDIENTE',
+        fecha: {
+          gte: desde
+        }
+      },
+      orderBy: {
+        fecha: 'desc'
+      }
+    });
+  },
+
+  listarMultasDelInspector: async (filtros: ListarMultasInspectorFiltros) => {
+    const where = construirWhereMultasInspector(filtros);
+    const skip = (filtros.pagina - 1) * filtros.limite;
+
+    const [items, total] = await orm.$transaction([
+      orm.multa.findMany({
+        where,
+        orderBy: { fecha: 'desc' },
+        skip,
+        take: filtros.limite,
+        include: {
+          inspector: {
+            select: {
+              id: true,
+              legajo: true
+            }
+          }
+        }
+      }),
+      orm.multa.count({ where })
+    ]);
+
+    return { items, total };
+  },
+
+  buscarDetalleMultaDelInspector: async (inspectorId: number, multaId: number) => {
+    return await orm.multa.findFirst({
+      where: {
+        id_multa: multaId,
+        inspectorId
+      },
+      include: {
+        inspector: {
+          include: {
+            usuario: {
+              select: {
+                email: true,
+                dni: true
+              }
+            }
+          }
+        },
+        vehiculo: {
+          include: {
+            conductores: {
+              include: {
+                conductor: {
+                  include: {
+                    usuario: {
+                      select: {
+                        email: true,
+                        dni: true
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        operacionpago: {
+          orderBy: { fecha_creacion: 'desc' },
+          select: {
+            id: true,
+            tipo: true,
+            estado: true,
+            monto: true,
+            fecha_creacion: true,
+            fecha_actualizacion: true,
+            mercadoPagoPaymentId: true
+          }
+        }
       }
     });
   }
